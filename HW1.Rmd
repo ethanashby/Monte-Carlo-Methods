@@ -1,0 +1,246 @@
+---
+title: 'Homework #1:  First steps'
+author: "Ethan Ashby"
+output:
+  html_document:
+    css: ./homework-style.css
+  pdf_document: 
+    keep_tex:  TRUE
+---
+
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\sd}{\operatorname{SD}}
+\newcommand{\sqrtfcn}{\operatorname{sqrt}}
+
+\renewcommand{\linethickness}{0.2mm}
+
+```{r setup, include=FALSE, warning = FALSE, message= FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+#Color Format
+colFmt = function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt = function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\fbox{",x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- boxFmt
+```
+
+Due:  Feb. 2, 2021
+
+We will need the following libraries for this homework.
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+The following ensures that the same random choices are made each time the document is knit.
+```{r}
+set.seed(12345)
+```
+
+
+Instructions:  
+
+1) Be sure to put the file `homework-style.css` in the parent directory of the directory where you have your .Rmd file.
+
+1) Put your solutions between the lines that read `::::: {.solution}` and `:::::`.  
+
+2) Knit the file to .html.
+
+3) Print the file to .pdf using a browser.
+
+4) Upload your .pdf file to Gradescope.
+
+5) Mark the pages your problem solutions are on.
+
+6) Be sure to box your work with the `\boxed{put in box}` $\LaTeX$ command.
+
+7) Be sure to give nonintegral answers to four significant digits.
+
+::::: {.problem}   
+If $U \sim \unifdist([0, 1])$, what is $\mean[\sqrt{U}]$?
+:::::
+
+::::: {.solution}
+Per **Fact 1** on the preclass notes for 1/25/21, if we have a random variable $X$ with density $f_x$, then $\mathbb{E}[g(x)]=\int_\mathbb{R} g(t) f_X(t)$. In this problem have a RV $U$ with density $\textrm{Unif}[0,1]$, implying that $\mathbb{E}[\sqrt{U}]={\displaystyle \int_{\mathbb{R}} \sqrt{x} \cdot \mathbb{I}(x \in [0,1]) dx}={\displaystyle \int_0^1 \sqrt{x} \: dx}=\bigg[\frac{2}{3}x^{3/2}\bigg]^1_0=\boxed{\frac{2}{3}}$.
+
+To validate our answer empirically (using MC, we draw 1000 random values from $\unifdist([0, 1]$, calculate their square roots, and calculate the mean)
+```{r}
+set.seed(12345)
+x<-runif(1000)
+sqrtx<-sqrt(x)
+paste("MC estimate:", round(mean(sqrtx), 4))
+```
+The Monte Carlo estimate is close to the analytical solution. I'm satisfied :)
+:::::
+
+::::: {.problem}
+Suppose $\sd(X) = 3.2$ and $X_1, \ldots, X_{10}$ are iid as $X$.  What is the standard deviation of 
+\[
+\frac{X_1 + \cdots + X_{10}}{10}?
+\]
+:::::
+
+::::: {.solution}
+Per **Fact 4** on the preclass notes for 1/27/21, if $X_1, \cdots, X_{10}$ are iid $X$, then $SD \bigg( \frac{X_1 + \cdots + X_{10}}{10} \bigg)=\frac{SD(X)}{\sqrt{n}}$. This implies that $SD \bigg( \frac{X_1 + \cdots + X_{10}}{10} \bigg)=\frac{3.2}{\sqrt{10}}=\boxed{1.012}$
+:::::
+
+::::: {.problem}
+Find a function $h$ such that $\mean[h(U)] = \int_0^1 \exp(\sqrt{x}) \ dx$ for $U$ a standard uniform random variable.
+:::::
+
+::::: {.solution}
+Per **Fact 1** on Pre-class notes for 1/27/21, letting $h(u)=\frac{g(u)}{f_U(u)}$ (where $g(u)=\exp(\sqrt{u}) \: \mathbb{I}(u \in [0,1])$ is the function in integrand and $f_U(u)=\mathbb{I}(u \in [0,1])$ is the density of $U$) yields our desired result: $\mathbb{E}[h(u)]=\int g(u) \: du$. Thus, our desired $h(u)=\frac{\exp(\sqrt{u}) \: \mathbb{I}(u \in [0,1])}{ \mathbb{I}(u \in [0,1])}=\boxed{\exp(\sqrt{u}) \: \mathbb{I}(u \in [0,1])}$
+:::::
+
+::::: {.problem}
+Continuing the last problem, write $R$ code to estimate $\int_0^1 \exp(\sqrt{x}) \ dx$ using 1000 draws.  Estimate the error and report your answer in the form $a \pm b$.
+:::::
+
+::::: {.solution}
+```{r}
+set.seed(12345)
+#draw U's from standard uniform
+U<-runif(1000)
+#calculate expontiated sqrt U's
+expsqrtU<-exp(sqrt(U))
+#calculate arithmetic mean of these values, estimating expected value
+paste("MC estimate:", round(mean(expsqrtU), 3))
+
+#calculate sd of exponentiated sqrt U's
+sigma<-sd(expsqrtU)
+paste("Error:", round(sigma/sqrt(1000), 4))
+```
+The MC estimate for $\int_0^1 \exp(\sqrt{x}) \ dx = \boxed{2.022 \pm 0.014}$.
+:::::
+
+::::: {.problem}
+For $T \sim \expdist(1)$ (so $T$ has density $f_T(t) = \exp(-t) \ind(t \geq 0))$, find a function $h$ such that 
+\[
+\mean[h(T)] = \int_0^\infty \exp(-x^{3 / 2}) \ dx.
+\]
+:::::
+
+::::: {.solution}
+Recall from problem 3 that our desired $h(T)=\frac{g(t)}{f_T(t)}$ where $g(t)$ is the integrand in the expected value expression and $f_T(t)$ is the density of $T$. Thus, $h(T)=\frac{\exp(-t^{3/2}) \: \mathbb{I}(t \in [0,\infty])}{\exp(-t) \: \mathbb{I}(t \in [0,\infty])}=\boxed{\exp(t-t^{3/2}) \: \mathbb{I}(t \in [0,\infty])}$
+:::::
+
+::::: {.problem}
+Estimate $\int_0^\infty \exp(-x^{3 / 2}) \ dx$ using $T \sim \expdist(1)$ and importance sampling with $1000$ samples.
+:::::
+
+::::: {.solution}
+```{r}
+set.seed(12345)
+#sample T's from exponential distribution with rate=1
+ts<-rexp(1000, rate=1)
+#transform the T's according to h(t) defined in the previous problem
+trans_ts<-exp(ts-ts^(1.5))
+paste("MC estimate:", round(mean(trans_ts), 4))
+```
+
+The Monte Carlo estimate for $\int_0^\infty \exp(-x^{3 / 2}) \ dx = \boxed{0.9237}$
+
+:::::
+
+::::: {.problem}
+Consider the integral
+\[
+a = \int_{x = 0}^\infty \exp(-x^{3 / 2}) \ dx.
+\]
+Use $t = 1 - 1 / (1  + x)$ to show that
+\[
+a = \int_{t = 0}^1 \exp(-(t / (1 - t))^{3/2})/ (1 - t)^2 \ dt.
+\]
+::::: 
+
+::::: {.solution}
+First, let's write $t=1-1/(1+x)$ in terms of $x$. $t=1-1/(1+x) \rightarrow  1 = \frac{1}{t} - \frac{1}{t \: (1+x)} \rightarrow (1+x)=\frac{1+x}{t}-\frac{1}{t} \rightarrow \frac{t-1}{t} (1+x)=-\frac{1}{t} \rightarrow x =- \frac{1}{t-1} -1 = \frac{-t}{t-1}=\frac{t}{1-t}$.
+Thus, we've shown that $x=\frac{t}{1-t}$.
+Note that then $dx=\frac{1}{(t-1)^2} \ dt$ using the quotient rule.
+Now we can substitute in $\frac{t}{1-t}$ for $x$ and $\frac{1}{(t-1)^2} \ dt$ for $dx$ in the integral. But we must also change the limits of integration. In the original integral, $x \in [0, \infty)$ and since $t=1-1/(1+x)$, $t \in [0, 1)$.
+Thus, our final integral, where we've changed the integrand, limits, and differential is as expected:
+$a = \int_{t = 0}^1 \exp(-(t / (1 - t))^{3/2})/ (1 - t)^2 \ dt$.
+:::::
+
+::::: {.problem}
+Continuing the last problem, use 1000 standard uniforms to estimate $a$ using the transformed integral.  Write your answer in the form $a \pm b$.
+:::::
+
+::::: {.solution}
+```{r}
+set.seed(12345)
+#random uniform ts
+tunifs<-runif(1000)
+#transformed ts
+t_trans<-exp(-(tunifs/(1-tunifs))^1.5)/(1-tunifs)^2
+paste("MC estimate:", mean(t_trans))
+paste("Est. error:", sd(t_trans)/sqrt(1000))
+```
+
+MC estimate for the value of the transformed integral is $\boxed{0.8751 \pm 0.0200}$
+:::::
+
+::::: {.problem}
+Using 1000 samples from uniforms over $[0, 1]^3$, estimate the value of 
+\[
+\int_{(x, y, z) \in [0, 1]^3} \sqrt{x + y}\exp(-x - z) \ d\real^3.
+\]
+:::::
+
+::::: {.solution}
+This is where MC solutions get really good!
+```{r}
+set.seed(12345)
+#generate 1000 by 3 matrix containing random x,y,z trios over [0,1]
+xyz<-replicate(3, runif(1000))
+#create function that calculates h(x,y,z)
+fun<-function(vec){sqrt(vec[1]+vec[2])*exp(-vec[1]-vec[3])}
+#apply this function over every row of xyz, i.e. 1000 instances of x,y,z trios
+Ts<-apply(xyz, MARGIN=1, FUN = fun)
+paste("MC estimate:", round(mean(Ts),4))
+```
+My Monte Carlo estimate for the integral is $\boxed{0.3751}$.
+:::::
+
+::::: {.problem}
+Using 1000 samples, estimate the following integral:
+\[
+\int_{(x_1, \ldots, x_{20}) \in [0,1]^{20}} \min\left(11, \sum_{i = 1}^n x_i\right) \ d\real^{20}.
+\]
+[Note:  these types of *minimum* integrands arise often in mathematical finance.]
+:::::
+
+::::: {.solution}
+
+```{r}
+set.seed(12345)
+#generate 1000 by 20 matrix containing random (x1, ..., x20) from [0,1]^20
+inputs<-replicate(20, runif(1000))
+#create function that calculates the integrand function
+fun<-function(vec){min(11, sum(vec))}
+#apply this function over every row of inputs, i.e. 1000 instances of inputs
+Ts<-apply(inputs, MARGIN=1, FUN = fun)
+paste("MC estimate:", round(mean(Ts),4))
+```
+My MC estimate for the value of the integral $\boxed{9.8157}$
+:::::

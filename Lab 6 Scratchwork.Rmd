@@ -1,0 +1,92 @@
+---
+title: "Lab 6 Scratchwork"
+author: "Ethan Ashby"
+date: "3/19/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+
+g <- ggplot() +
+geom_polygon(aes(x = c(0, 1, 1.5), y = c(0, 1, -0.5)), fill = "blue", color = "black", alpha =
+0.1) +
+xlab("x") + ylab("y") + theme_minimal()
+g
+```
+
+```{r}
+step_lab1 <- function(x, m) {
+y <- x + m
+if ((-y[1] + y[2] <= 0) & (y[1] + 3 * y[2] >= 0) & (3 * y[1] + y[2] <= 4))
+return(y) else
+return(x) 
+}
+
+chain_lab1 <- function(steps, start, scale = 1) {
+state <- start
+x <- rep(0, steps + 1)
+y <- rep(0, steps + 1)
+x[1] <- start[1]
+y[1] <- start[1]
+m1 <- scale * rnorm(steps) 
+m2 <- scale * rnorm(steps) 
+for (i in 1:steps) {
+x[i + 1] <- state[1]
+y[i + 1] <- state[2]
+state <- step_lab1(state, c(m1[i], m2[i]))
+}
+return(tibble(x, y)) 
+}
+
+res <- chain_lab1(1000, c(0, 0))
+
+g + geom_point(data = res, aes(x, y))
+```
+```{r}
+library(coda)
+autocorr(as.mcmc(pull(res, x)))
+
+autocorr(as.mcmc(pull(res, y)))
+```
+Question 6
+```{r}
+res <- chain_lab1(1000, c(0, 0), scale=0.05)
+autocorr.plot(as.mcmc(pull(res, x)), lag.max=100)
+```
+
+Gibbs samplers
+```{r}
+step_lab2 <- function(x, u1, u2) {
+  w <- rep(0, 2)
+  w[1] <- ((4 - x[2]) / 3 - max(x[2], -3 * x[2])) * u1 + max(x[2], -3 * x[2]) 
+  w[2] <- (min(w[1], 4 - 3 * w[1]) + w[1] / 3) * u2 - w[1] / 3
+  return(w)
+}
+
+chain_lab2 <- function(steps, start) {
+state <- start
+x <- rep(0, steps + 1)
+y <- rep(0, steps + 1)
+x[1] <- start[1] 
+y[1] <- start[1]
+u1 <- runif(steps) 
+u2 <- runif(steps) 
+for (i in 1:steps) {
+x[i + 1] <- state[1]
+y[i + 1] <- state[2]
+state <- step_lab2(state, u1[i], u2[i])
+}
+return(tibble(x, y)) 
+}
+
+res2 <- chain_lab2(100, c(0, 0))
+g + geom_point(data = res2, aes(x, y))
+
+res2 %>%
+  ggplot() +
+geom_line(aes(x = 1:length(y), y = y))
+
+autocorr.plot(as.mcmc(pull(res2, x)), lag.max = 100)
+```
+

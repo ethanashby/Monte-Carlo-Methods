@@ -1,0 +1,555 @@
+---
+title: 'Homework #4'
+author: "Ethan Ashby"
+output:
+  html_document:
+    css: ./homework-style.css
+  pdf_document: 
+    keep_tex:  TRUE
+---
+
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\var}{\mathbb{V}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\multinomialdist}{\textsf{Multinomial}}
+\newcommand{\abs}{\operatorname{abs}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\sd}{\operatorname{SD}}
+\newcommand{\sqrtfcn}{\operatorname{sqrt}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+
+\renewcommand{\linethickness}{0.2mm}
+
+```{r setup, include=FALSE, warning = FALSE, message= FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, cache=TRUE)
+#Color Format
+colFmt = function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt = function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\fbox{",x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- boxFmt
+```
+
+We will need the following libraries for this homework.
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(knitr)
+```
+
+The following ensures that the same random choices are made each time the document is knit.
+```{r}
+set.seed(12345)
+```
+
+
+Instructions:  
+
+1) Be sure to put the file `homework-style.css` in the parent directory of the directory where you have your .Rmd file.
+
+2) Put your solutions between the lines that read `:::: {.solution}` and `::::`.  
+
+3) Knit the file to .html.
+
+4) Print the file to .pdf using a browser.
+
+5) Upload your .pdf file to Gradescope.
+
+6) After you upload to Gradescope, you will be asked to mark the pages your problem solutions are on.
+
+7) Be sure to box your answers with the `\boxed{put in box}` $\LaTeX$ command.
+
+8) Be sure to give nonintegral answers to four significant digits, except when the form is $a \pm b$.  In that case, give $b$ to two significant digits (rounded up) and give $a$ to the same number of *decimal places* as $b$ has.
+
+::::: {.problem}
+A sampling of the entering class of a magnet high school shows that 23 are going to enter the Arts track, 32 are going to enter the Science track, and 28 are going to enter the Literature track.
+
+The null hypothesis is that the number of students entering each track is $(X_1, X_2, X_3) \sim \multinomialdist(83, 1 / 3, 1 / 3, 1 / 3).$ 
+
+a.  If this null hypothesis is true, what is the distribution of $X_1$?
+
+b.  What is the distribution of $[X_2 \mid X_1]$?
+:::::
+
+::::{.solution}
+a. If the null hypothesis is true, $\boxed{X_1 \sim \binomialdist(83, 1/3)}$. 
+
+b. Under the null hypothesis, $\boxed{[X_2 \mid X_1] \sim \binomialdist(83-X_1, 1/2)}$
+::::
+
+::::: {.problem}
+Continuing the last problem.  A statistic that can be used to test the null hypothesis that students are entering tracks uniformly at random is
+\[
+S(X_1, X_2, X_3) = \sum_{i = 1}^3 (X_i - (23 + 32 + 28) / 3)^2.
+\]
+
+The $p$-value is 
+\[
+\prob(S(X_1, X_2, X_3) \geq S(23, 32, 28)).
+\]
+
+Estimate the $p$-value with $10^5$ samples from the multinomial distribution.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+
+```{r}
+#initialize function that can draw from multinomial distribution
+rmultinomial<-function(n,p){
+  k<-length(p)
+  x<-rep(0, k)
+  pnorm<-1
+  for(i in 1:k){
+    x[i]<-rbinom(1, n, p[i]/pnorm)
+    n<-n-x[i]
+    pnorm<-pnorm-p[i]
+  }
+  return(x)
+}
+
+#initialize function that can calculate test statistics
+test_stat<-function(data, p){sum((data-mean(data))^2)}
+
+####
+#simulate under null to obtain p-value
+####
+#multinomial probabilities under null
+set.seed(12345)
+p<-c(1,1,1)/3
+
+#calculate our test stat
+sdata<-test_stat(data=c(23,32,28), p=p)
+
+#null replicates
+res<-replicate(10^5, (test_stat(data=rmultinomial(83, p=p), p=p)))
+
+tibble(
+  est_mean=mean(res>=sdata),
+  est_error=sd(res>=sdata)/sqrt(length(res))
+)
+```
+
+The p-value is $\boxed{0.5050 \pm 0.0016}$.
+::::
+
+
+::::: {.problem}
+Suppose $U_1 \sim \betadist(3, 1)$ and $[U_2 \mid U_1] \sim \unifdist([0, U_1])$.
+
+a. Write R code to generate from $(U_1, U_2)$.
+
+b. Estimate $\mean[U_2]$ using $10^5$ samples and Basic Monte Carlo.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+a. 
+```{r}
+#this function generates random draws from the distribution outlined above
+r_u1_u2<-function(){
+  #draw from appropriate beta distribution
+  U1<-rbeta(1, shape1=3, shape2=1)
+  #draw from random uniform distribution with min=0 and max-U1
+  U2<-runif(1, min=0, max=U1)
+  #return (U1, U2)
+  return(c(U1, U2))
+}
+```
+
+b.
+```{r}
+set.seed(12345)
+#replicate many times, only returning the second entry (U2)
+res<-replicate(10^5, r_u1_u2()[2])
+
+#output in tibble
+tibble(
+  est_mean=mean(res),
+  est_error=sd(res)/sqrt(length(res))
+)
+```
+
+The basic Monte Carlo estimate is $\mean[U_2]=\boxed{0.37500 \pm 0.00077}$
+::::
+
+
+::::: {.problem}
+Consider the Ising model on a 4 by 4 lattice, where the probability of a configuration $x \in \{0, 1\}^{16}$ is proportional to $\exp(-\beta h(x))$, where $h(x)$ counts the number of adjacent (up-down or right-left) nodes that are of equal value in the configuration.
+
+a. Using Acceptance Rejection draw 1000 replications of the model at $\beta = 0$, and plot the resulting values of $h(X)$ in a histogram with 25 bins.
+
+b. Using Acceptance Rejection draw 1000 replications of the model at $\beta = 0.3$, and plot the resulting values of $h(X)$ in a histogram with 25 bins.
+
+c. Using Acceptance Rejection draw 1000 replications of the model at $\beta = 0.6$, and plot the resulting values of $h(X)$ in a histogram with 25 bins.
+:::::
+
+::::{.solution}
+
+a.
+
+Let's use some code from the notes to make life easier.
+
+```{r}
+set.seed(12345)
+vertices<-1:16
+
+#the edges tibble contains all the plot adjacencies in the 4x4 lattice
+i <- c(1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16)
+j <- c(2, 5, 1, 3, 6, 2, 4, 7, 3, 8, 1, 6, 9, 2, 5, 7, 10, 3, 6, 8, 11, 4, 7, 12, 5, 10, 13, 6, 9, 11, 14, 7, 10, 12, 15, 8, 11, 16, 9, 14, 10, 13, 15, 11, 14, 16, 12, 15)
+edges <- tibble(
+i = i,
+j= j ) %>%
+filter(i < j)
+
+#h calculates the number of adjacent plots with the same label
+h <- function(x, edges) {sum(x[edges$i] == x[edges$j])}
+
+#AR for this ising model
+ar_ising <- function(vertices, edges, beta) {a <- FALSE
+  n <- length(vertices)
+  m <- nrow(edges)
+  while (!a) {
+    x <- (rbinom(length(vertices), 1, 0.5))
+    u <- runif(1)
+    a <- (u < exp(beta * (h(x, edges)-nrow(edges))))
+  }
+return(x) }
+
+#to solve problem a
+res<-replicate(1000, h(ar_ising(vertices=vertices, edges=edges, beta=0), edges=edges))
+
+ggplot(data=NULL)+geom_histogram(aes(x=res), bins=25)+theme_classic()+xlab("h(X)")
+```
+
+b.
+```{r}
+set.seed(12345)
+res<-replicate(1000, h(ar_ising(vertices=vertices, edges=edges, beta=0.3), edges=edges))
+
+ggplot(data=NULL)+geom_histogram(aes(x=res), bins=25)+theme_classic()+xlab("h(X)")
+```
+
+c.
+```{r}
+set.seed(12345)
+res<-replicate(1000, h(ar_ising(vertices=vertices, edges=edges, beta=0.6), edges=edges))
+
+ggplot(data=NULL)+geom_histogram(aes(x=res), bins=25)+theme_classic()+xlab("h(X)")
+```
+::::
+
+
+::::: {.problem}
+Suppose our goal is to sample from the unnormalized density:
+\[
+f(x_1, x_2, x_3, x_4) = \left[\sum_{i = 1}^4 i x_i\right] \ind((x_1, \ldots, x_4) \in [0, 1]^4).
+\]
+
+a. What is $\max_{(x_1, \ldots, x_4) \in [0, 1]^4} f(x_1, \ldots, x_4)$?
+
+b. Write code to generate samples from $f$ using AR.  Use this to estimate $\mean[X_1 + \cdots + X_4]$ with 1000 samples.  Report your answer as $a \pm b$. 
+:::::
+
+::::{.solution}
+a.
+$f(x_1, \ldots, x_4)$ is maximized when all the $x_i$ are maximized because $f$ is a monotonically increasing function wrt $x_1 \ldots x_4$. $x_i \in [0,1]$ are all maximized at $x_i=1$. Therefore: $\max_{(x_1, \ldots, x_4) \in [0, 1]^4} f(x_1, \ldots, x_4)=f(x_1=1, x_2=1, x_3=1, x_4=1)=1+2+3+4=\boxed{10}$
+
+b.
+```{r}
+set.seed(12345)
+ar_fun<-function(){
+  a<-FALSE
+  while(!a){
+    #step 1: draw 4 random uniform variables (X1, ... , X4)
+    x<-runif(4, 0, 1)
+    #step 2: draw U uniformly from [0,1]
+    u<-runif(1, 0, 1)
+    #step 3: if U \leq f(x)/g(x) where g(x) is max value, return X
+    a<-(u <= (1*x[1]+2*x[2]+3*x[3]+4*x[4])/10)
+  }
+  return(x)
+}
+
+res<-replicate(1000, ar_fun())
+
+tibble(
+  est_mean=mean(apply(res, MARGIN=2, FUN=sum)),
+  est_sd=sd(apply(res, MARGIN=2, FUN=sum))/sqrt(dim(res)[2])
+)
+```
+
+My AR estimate for $\mean[X_1 + \cdots + X_4]=\boxed{2.190 \pm 0.018}$.
+::::
+
+
+::::: {.problem}
+Suppose our goal is to sample from the unnormalized density:
+\[
+f(x_1, x_2, x_3, x_4) = 1 + \left[\sum_{i = 1}^4 x_i\right] \ind((x_1, \ldots, x_4) \in \{0, 1\}^4).
+\]
+
+Construct an AR algorithm with draws that are uniform over $\{0, 1\}^4$ to draw $(X_1, \ldots, X_4) \sim f$.   Using 1000 of your draws, estimate $\mean[X_1]$.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+Note that the maximum of $f$ is 5. We use this fact to design our AR algorithm.
+
+```{r}
+set.seed(12345)
+
+ar_p6<-function(){
+  a<-FALSE
+  while(!a){
+    #step 1: draw 4 random uniform variables (X1, ... , X4)
+    x<-runif(4, 0, 1)
+    #step 2: draw U uniformly from [0,1]
+    u<-runif(1, 0, 1)
+    #step 3: if U \leq f(x)/g(x) where g(x) is max value, return X
+    a<-(u <= (1+sum(x))/5)
+  }
+  return(x)
+}
+
+res<-replicate(1000, ar_p6())
+
+tibble(
+  est_mean=mean(res[1,]),
+  est_sd=sd(res[1,])/sqrt(dim(res)[2])
+)
+```
+
+My AR estimate for $\mean[X_1]=\boxed{0.5450 \pm 0.0091}$
+::::
+
+::::: {.problem}
+Consider the Ising model on the graph $G$ that consists of two nodes connected by an edge:
+```{r, echo = FALSE, fig.height = 2, fig.width = 2}
+angles <- seq(0, 2 * pi, by = 0.01)
+r <- 0.2
+xc <- r * cos(angles)
+yc <- r * sin(angles)
+ggplot() +
+  theme_void() +
+  geom_segment(aes(x = 0, y = 0, xend = 1, yend = 0), lwd = 2) +
+  geom_polygon(aes(xc, yc), lwd = 2, fill = "yellow", color = "blue") +
+  geom_polygon(aes(1 + xc, yc), lwd = 2, fill = "yellow", color = "blue") +
+  coord_fixed()
+```
+
+Then the state space of configurations is $\Omega = \{(0, 0), (0, 1), (1, 0), (1, 1)\}$.  Note that 
+\[
+h(0, 0) = h(1, 1) = 1, \ h(1, 0) = h(0, 1) = 0,
+\]
+so the unnormalized density is 
+\[
+g(0, 0) = g(1, 1) = \exp(\beta), \ g(1, 0) = g(0, 1) = 1.
+\]
+Adding these up gives the normalizing constant $Z(\beta)$ for this graph, which is  
+\[
+2 + 2 \exp(\beta).
+\]
+
+Note that for the 2 by 2 lattice there are $2^4 = 16$ configurations.
+
+```{r, echo = FALSE, fig.height = 2, fig.width = 2}
+angles <- seq(0, 2 * pi, by = 0.01)
+r <- 0.2
+xc <- r * cos(angles)
+yc <- r * sin(angles)
+ggplot() +
+  theme_void() +
+  geom_segment(aes(x = 0, y = 0, xend = 1, yend = 0), lwd = 2) +
+  geom_segment(aes(x = 0, y = 1, xend = 1, yend = 1), lwd = 2) +
+  geom_segment(aes(x = 0, y = 0, xend = 0, yend = 1), lwd = 2) +
+  geom_segment(aes(x = 1, y = 0, xend = 1, yend = 1), lwd = 2) +
+  geom_polygon(aes(xc, yc), lwd = 2, fill = "yellow", color = "blue") +
+  geom_polygon(aes(1 + xc, yc), lwd = 2, fill = "yellow", color = "blue") +
+  geom_polygon(aes(1 + xc, 1 + yc), lwd = 2, fill = "yellow", color = "blue") +
+  geom_polygon(aes(xc, 1 + yc), lwd = 2, fill = "yellow", color = "blue") +
+  coord_fixed()
+```
+
+Find $Z(\beta)$ for the 2 by 2 lattice.
+:::::
+
+::::{.solution}
+Let's list out all possible configurations on the 2x2 lattice and their corresponding h values:
+
+$$h(0,0,0,0)=h(1,1,1,1)=4 \\ 
+h(1,1,1,0)=h(1,1,0,1)=h(1,0,1,1)=h(0,1,1,1)=h(0,0,0,1)=h(0,0,1,0)= \\
+\\h(0,1,0,0)=h(1,0,0,0)=h(1,1,0,0)=h(1,0,0,1)=h(0,0,1,1)=h(0,1,1,0)=2 \\
+h(1,0,1,0)=h(0,1,0,1)=0$$
+
+The unnormalized density of the first set of terms is $g=\exp{(4\beta)}$.
+The unnormalized density for the second set of terms is $g=\exp{(2\beta)}$.
+The unnormalized density for the third set of terms is $g=1$.
+
+Adding up all these values gives us the value of the normalizing constant $Z(\beta)=\boxed{2\exp{(4\beta)}+14\exp{(2\beta)}+2}$
+::::
+
+::::: {.problem}
+Consider a draw $X = (X_1, \ldots, X_4)$ uniform from $\{0, 1\}^4$.  
+
+a. What is the density of $X$ with respect to counting measure?
+
+b. Find an importance sampling function $g$ such that 
+\[
+\mean[g(X)] = \sum_{(x_1, \ldots, x_4) \in \{0, 1\}^4} \exp(\beta h(x)).
+\]
+
+c. Use $g$ with 1000 samples to estimate $Z(1.5)$.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+
+a. What is density of $X$ with respect to counting measure?
+$X$ has density wrt counting measure if $X$ is discrete and $f_X(i)=P(X=i)$.
+For $i \in \{0,1\}^4$, $P(X=i)=1/16$.
+Therefore, $f_X(i)=\boxed{\frac{1}{16} \ind(i \in  \{0,1\}^4)}$.
+
+b. Find the importance sampling function $g(X)$ to satisfy requirement.
+Recall that the importance sampling function is defined as $g(x)=\frac{f(x)}{f_X(x)}$ and $\mathbb{E}[g(X)]=\sum f(x) dx$ (when working in discrete case). Thus, the importance sampling function that we're looking for is $g(x)=\frac{f(x)}{f_X(x)}=\frac{\exp{(\beta h(x))}}{1/16} \ind(i \in  \{0,1\}^4)= \boxed{16 \exp{(\beta h(x))} \ind(i \in  \{0,1\}^4)}$.
+
+c.
+We know that $Z(\beta)=\sum \exp{(\beta h(x))}$ from lecture notes. To importance sample and estimate $Z(\beta)$, I will repeatedly draw values from $g(x)$ and calculate their mean.
+
+```{r}
+set.seed(12345)
+#helper function h(x)
+h <- function(x, edges) {sum(x[edges$i] == x[edges$j])}
+
+#edges on 2x2 lattice
+i <- c(1, 1, 2, 2, 3, 3, 4, 4)
+j <- c(2, 4, 1, 3, 2, 4, 1, 3)
+edges <- tibble(
+i = i,
+j= j ) %>%
+filter(i < j)
+
+gofx_samp<-function(beta){
+  x<-sample(c(0,1), size=4, replace=TRUE)
+  h<-h(x, edges)
+  return(16*exp(beta*h))
+}
+
+res<-replicate(1000, gofx_samp(beta=1.5))
+tibble(
+  est_mean=mean(res),
+  est_sd=sd(res)/sqrt(length(res))
+)
+```
+
+Thus, my estimate is $\boxed{1087 \pm 66}$.
+
+Note that this is close to the analytical value described in problem #7: `r round(2*exp(4*1.5)+14*exp(2*1.5)+2, 2)`.
+::::
+
+
+::::: {.problem}
+The density of a *standard Cauchy random variable* is
+\[
+f(x) = \frac{2}{\tau} \cdot \frac{1}{1 + x^2}.
+\]
+The ITM of generating a standard Cauchy using a standard uniform is to use
+\[
+\tan((\tau / 2)(2U - 1))
+\]
+Essentially this generates an angle uniformly between $-90^\circ$ and $90^\circ$, and then takes the tangent of it.
+
+The following is a procedure for generating from this distribution, without the need 
+
+a. Write R code that uses draws from to generate from $[0, 1] \times [-1, 1]$ together with AR to draw uniformly from the right side of the unit circle:
+\[
+\{(x, y) : x \geq 0, x^2 + y^2 \leq 1\}.
+\]
+
+b. Given such a sample $(X, Y)$, then use $Y / X$ to output samples from the standard Cauchy distribution.  Repeat 1000 times to get an estimate of $\prob(|T| \geq 1)$ for $T$ a standard Cauchy.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+a.
+```{r}
+#this function samples from the right side of the unit circle
+samp_unit_circ<-function(){
+  a<-FALSE
+  while(!a){
+    #step 1: draw 4 random uniform variables (X1, ... , X4)
+    x<-c(runif(1, 0, 1), runif(1, -1, 1))
+    #step 2: if inside unit circle return
+    a<-(sum(x^2)<=1)
+  }
+  return(x)
+}
+```
+b.
+By sampling $(X,Y)$ uniformly over the unit circle, $Y/X$ will give us our Cauchy RVs.
+
+```{r}
+set.seed(12345)
+
+xy_pairs<-replicate(1000, samp_unit_circ())
+
+cauchy_rvs<-xy_pairs[2,]/xy_pairs[1,]
+
+tibble(
+  est_prob=sum(cauchy_rvs>=1)/length(cauchy_rvs),
+  est_sd=sd(cauchy_rvs>=1)/sqrt(length(cauchy_rvs))
+)
+```
+
+My estimate for $\prob(|T| \geq 1)$ for $T$ a standard Cauchy is $\boxed{0.252 \pm 0.014}$.
+::::
+
+::::: {.problem}
+a. Use uniformly generated permutations on 10 elements together with AR to write R code to uniformly generate from permutations such that the value in the first position is larger than the number in the fourth position.  So $(4, 7, 3, 2, 10, 9, 6, 8, 1)$ would be valid but $(2, 7, 3, 4, 10, 9, 6, 8, 1)$ would not.
+
+b. For the output permutations $(X_1, \ldots, X_{10})$, estimate $\mean[X_4]$ using Basic Monte Carlo and 1000 samples.  Report your result as $a \pm b$.
+:::::
+
+::::{.solution}
+a.
+```{r}
+ar_perm<-function(){
+  a<-FALSE
+  while(!a){
+    samp<-sample(1:10, replace=FALSE)
+    a<-(samp[1]>samp[4])
+  }
+  return(samp)
+}
+```
+
+b.
+```{r}
+set.seed(12345)
+x4s<-replicate(1000, ar_perm()[4])
+tibble(
+  est_mean=mean(x4s),
+  est_sd=sd(x4s)/sqrt(length(x4s))
+)
+```
+
+My basic MC estimate for $\mean[X_4]$ is $\boxed{3.780 \pm 0.071}$.
+::::

@@ -1,0 +1,473 @@
+---
+title: 'Homework #2:  Basic MC and Beyond'
+author: "Ethan Ashby"
+output:
+  html_document:
+    css: ./homework-style.css
+  pdf_document: 
+    keep_tex:  TRUE
+---
+
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\var}{\mathbb{V}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\sd}{\operatorname{SD}}
+\newcommand{\sqrtfcn}{\operatorname{sqrt}}
+
+\renewcommand{\linethickness}{0.2mm}
+
+```{r setup, include=FALSE, warning = FALSE, message= FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+#Color Format
+colFmt = function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt = function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\fbox{",x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- boxFmt
+```
+
+
+We will need the following libraries for this homework.
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+The following ensures that the same random choices are made each time the document is knit.
+```{r}
+set.seed(12345)
+```
+
+
+Instructions:  
+
+1) Be sure to put the file `homework-style.css` in the parent directory of the directory where you have your .Rmd file.
+
+1) Put your solutions between the lines that read `:::: {.solution}` and `::::`.  
+
+2) Knit the file to .html.
+
+3) Print the file to .pdf using a browser.
+
+4) Upload your .pdf file to Gradescope.
+
+5) After you upload to Gradescope, you will be asked to mark the pages your problem solutions are on.
+
+6) Be sure to box your work with the `\boxed{put in box}` $\LaTeX$ command.
+
+7) Be sure to give nonintegral answers to four significant digits (unless in $a \pm b$ form, in which case round up $b$ to two significant digits and truncate $a$ to the same number of decimal places as $b$.)
+
+::::: {.problem}   
+Suppose $U_1, \ldots, U_5$ are iid $\unifdist([0, 3])$.  Estimate the probability that $U_1 U_2 \cdots U_5 < 0.02$ using basic Monte Carlo with 1000 samples.  Report your result as $a \pm b$.
+:::::
+
+:::: {.solution}
+```{r}
+set.seed(12345)
+#basic MC simulation
+dat<-replicate(1000, runif(5, min=0, max=3))
+
+#this step takes the product of each column of 5 random uniform vbls
+prods<-apply(dat, 2, prod)
+#computes the basic MC estimate for P(U1*U2*U3*U4*U5)
+mean(prods<0.02)
+#compute SE of estimate
+sd(prods<0.02)/sqrt(1000)
+```
+The basic monte carlo estimate is $\boxed{0.0420 \pm 0.0064}$.
+
+::::
+
+::::: {.problem}   
+Suppose $U_1, \ldots, U_5$ are iid $\unifdist([0, 3])$.  
+
+a. Estimate the probability that $U_1 U_2 \cdots U_5 < 0.02$ using GBAS with $k = 1000$.
+
+b. What is the chance that the output has greater than 10% absolute relative error?
+:::::
+
+:::: {.solution}
+(a)
+```{r}
+set.seed(12345)
+#write gbas parent function
+gbas <- function(k, coin) {
+  total <- 0
+  n <- 0
+  while (total < k) {
+    total <- total + coin()
+    n <- n + 1 }
+return((k - 1) / rgamma(1, n, 1)) 
+}
+
+#write coin function
+f_coin <- function() {
+  U_s<-runif(5, min=0, max=3)
+  return(as.integer(prod(U_s) < 0.02))
+}
+
+gbas_pred<-gbas(k=1000, coin=f_coin)
+gbas_pred
+```
+
+My GBAS predicted probability is $\boxed{0.04289}$
+
+(b)
+Recall that for $\epsilon>0$ and $k$ a positive integer, the output of GBAS is an $(\epsilon, \delta)$-ras, where
+$$\delta=1-(\cdf_X(1/(1-\epsilon))-\cdf_X(1/(1+\epsilon)))$$
+Where $X \sim \textrm{Gamma}(k,k-1)$.
+
+```{r}
+1-(pgamma(1/0.9, 1000, 999)-pgamma(1/1.1, 1000, 999))
+```
+
+The probability that the output has greater than 10% absolute error is $\boxed{0.001786}$.
+::::
+
+
+::::: {.problem} 
+Suppose $(U_1, U_2, U_3, U_4)$ are iid standard uniforms.  Then if the first two uniforms are used to form a point in $\real^2$, and the last two uniforms are used to form a point in $\real^2$, the distance between the two points is 
+\[
+d = \sqrt{(U_1 - U_3)^2 + (U_2 - U_4)^2}
+\]
+
+a. Use 1000 samples with Basic Monte Carlo to estimate the probability that $d > 0.5$.  Report your answer as $a \pm b$.
+
+b. Use GBAS with $k = 1000$ to estimate the probability that $d > 0.5$.
+:::::
+
+::::{.solution}
+(a)
+```{r}
+set.seed(12345)
+#basic monte carlo
+coords<-replicate(1000, runif(4, min=0, max=1))
+foi<-function(vec){
+  sqrt((vec[1]-vec[3])^2+(vec[2]-vec[4])^2)
+}
+
+dists<-apply(coords, MARGIN=2, FUN=foi)
+#calculate probability of distance being greater than 0.5
+mean(dists>0.5)
+
+#SE
+sd(dists>0.5)/sqrt(1000)
+```
+
+The basic monte carlo estimate is $\boxed{0.503 \pm 0.016}$.
+
+(b)
+```{r}
+set.seed(12345)
+#write gbas parent function
+gbas <- function(k, coin) {
+  total <- 0
+  n <- 0
+  while (total < k) {
+    total <- total + coin()
+    n <- n + 1 }
+return((k - 1) / rgamma(1, n, 1)) 
+}
+
+#write coin function
+f_coin <- function() {
+  U_s<-runif(4, min=0, max=1)
+  return(as.integer(foi(U_s) > 0.5))
+}
+
+gbas_pred<-gbas(k=1000, coin=f_coin)
+gbas_pred
+```
+
+The GBAS prediction is $\boxed{0.5244}$.
+
+::::
+
+
+::::: {.problem}   
+By combining uniforms, it is possible to create joint distributions where the random variables are not independent.  For instance, suppose $U_1, U_2$ are iid standard uniform random variables.  Let 
+\[
+(V_1, V_2) = (U_1 + U_2, U_1 - U_2).
+\]
+
+a. Estimate $\prob(V_1 > 1.5)$ using Basic Monte Carlo with 1000 samples, just reporting the mean without error.
+
+b. Estimate $\prob(V_2 > 0.5)$ using Basic Monte Carlo with 1000 samples, just reporting the mean without error.
+
+c. Estimate $\prob(V_1 > 1.5, V_2 > 0.5)$ using Basic Monte Carlo with 1000 samples, just reporting the mean without error.
+
+d. Based on your estimates, are $V_1$ and $V_2$ independent?
+:::::
+
+::::{.solution}
+(a)
+```{r}
+set.seed(12345)
+#basic MC
+U_s<-replicate(1000, runif(2, 0, 1))
+V1s<-apply(U_s, MARGIN=2, FUN=function(vec){vec[1]+vec[2]})
+mean(V1s>1.5)
+```
+The basic MC estimate of $\prob(V_1 > 1.5)$ is $\boxed{0.1590}$
+
+(b)
+```{r}
+set.seed(12345)
+#basic MC
+U_s<-replicate(1000, runif(2, 0, 1))
+V2s<-apply(U_s, MARGIN=2, FUN=function(vec){vec[1]-vec[2]})
+mean(V2s>0.5)
+```
+The basic MC estimate of $\prob(V_2 > 0.5)$ is $\boxed{0.1170}$
+
+(c)
+```{r}
+set.seed(12345)
+#basic MC
+U_s<-replicate(1000, runif(2, 0, 1))
+V1s<-apply(U_s, MARGIN=2, FUN=function(vec){vec[1]+vec[2]})
+V2s<-apply(U_s, MARGIN=2, FUN=function(vec){vec[1]-vec[2]})
+mean(V1s>1.5 & V2s>0.5)
+```
+The basic MC estimate of $\prob(V_1 > 1.5, V_2 > 0.5)$ is $\boxed{0}$.
+
+(d)
+
+If $V_1, V_2$ are independent, then $\prob(V_1 > 1.5, V_2 > 0.5)$=$\prob(V_1 > 1.5) \cdot \prob(V_2 > 0.5)$. This is not true in this case, because $\prob(V_1 > 1.5), \prob(V_2 > 0.5)$ are nonzero while $\prob(V_1 > 1.5, V_2 > 0.5)$ is 0. Thus, $V_1, V_2$ are NOT independent.
+::::
+
+
+::::: {.problem}   
+A river gets a random amount of water from three tributaries.  The first tributary deposits uniformly from $[50, 100]$ million gallons in a week, the second uniformly from $[20, 30]$, and the third uniformly from $[40, 45]$.  With Basic Monte Carlo and $10^5$ samples, estimate the probability that the total flow is at most 115 million gallons.  Write your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+```{r}
+#water_flow generates one random flow value
+water_flow<-function(){
+  r1<-runif(1, 50, 100)
+  r2<-runif(1, 20, 30)
+  r3<-runif(1, 40, 45)
+  return(r1+r2+r3)
+}
+
+#calculate 100000 random flows
+flows<-replicate(10^5, water_flow())
+
+#basic MC estimate of the probability
+mean(flows>115)
+sd(flows>115)/sqrt(10^5)
+```
+The basic Monte Carlo estimate is $\boxed{0.99168 \pm 0.00029}$.
+::::
+
+
+::::: {.problem} 
+A key Monte-Carlo application in frequentist statistics is the estimation of the $p$-value of a particular data set.  Given data modeled as $X$, and a statistic $S(X)$, the *$p$-value* of the particular realization of the data set $x$ is $\prob(S(X) \geq S(x))$.
+
+For example, suppose the following data is collected.
+
+```{r}
+x <- c(3.6, 1.8, 3.3, 2.3, 4.5, 2.9)
+y <- c(79, 54, 74, 62, 85, 55)
+```
+(These are eruption times and times between eruptions for Old Faithful geyser in Yellowstone National Park.)
+
+The `cor` function, for a set of $x$-coordinates and $y$-coordinates, returns a number between -1 and 1 that indicates how strongly correlated the $x$ and $y$ coordinates are.
+
+Consider the `cor` statistic for the data above
+
+```{r}
+cor(x, y)
+```
+
+That is a high correlation!  But is it enough to disqualify a model where the $x$ values are iid $\normaldist(3.1, 1^2)$ and the $y$ values are iid $\normaldist(68.2, 13^2)$ and the $x$ and $y$ are independent?
+
+Find the $p$-value of this model by drawing six $(x, y)$ pairs independently 1000 times to estimate the probability that the `cor` function returns a number greater than 0.8980788.  Report the result as $a \pm b$.
+:::::
+
+::::{.solution}
+```{r}
+set.seed(12345)
+#function that computes correlation between random draws from above distributions
+cor_null<-function(){
+  x_norms<-rnorm(6, mean=3.1, sd=1)
+  y_norms<-rnorm(6, mean=68.2, sd=13)
+  return(cor(x_norms, y_norms))
+}
+
+#replicate function call
+correlations_under_null<-replicate(1000, cor_null())
+
+mean(correlations_under_null>0.8980788)
+sd(correlations_under_null>0.8980788)/sqrt(1000)
+```
+
+The basic monte carlo estimate for this probability is $\boxed{0.0040 \pm 0.0020}$.
+::::
+
+
+::::: {.problem}   
+Find the smallest value of $k$ such that the output of `gbas(k, coin)` has at most a $10^{-6}$ chance of being more than 5\% relative error away from the true answer.
+:::::
+
+::::{.solution}
+Recall that for $\epsilon>0$ and $k$ a positive integer, the output of GBAS is an $(\epsilon, \delta)$-ras, where
+$$\delta=1-(\cdf_X(1/(1-\epsilon))-\cdf_X(1/(1+\epsilon)))$$
+Where $X \sim \textrm{Gamma}(k,k-1)$.
+
+In this case $\epsilon=0.05$ and $\delta=10^{-6}$.
+
+```{r}
+#write function that computes probability of being more than 5% away from true answer
+epsilon=0.05
+delta=10^-6
+foo<-function(k){1-(pgamma(1/(1-0.05), k, k-1)-pgamma(1/(1+0.05), k, k-1))}
+
+#run function over a grid of k values and return first entry that is less than 10^-6
+search_grid<-5000:10000
+index=head(which(foo(search_grid)<10^-6), 1)
+
+#return smallest k that satisfies
+search_grid[index]
+```
+
+The smallest $k$ that satisifies this requirement is $\boxed{k=9768}$.
+::::
+
+
+::::: {.problem}   
+Suppose the goal is to draw $X$ with density
+\[
+f_X(s) = \frac{3}{2}(s - 1)^2 \ind(s \in [0, 2]).
+\]
+Find a function $g$ such that for $U \sim \unifdist([0, 1])$, $g(U) \sim X$.
+:::::
+
+::::{.solution}
+Step 1: find the $\cdf_X(x)$
+$$\cdf_X(x)=\int^a_{-\infty} \frac{3}{2}(x - 1)^2 \ind(x \in [0, 2])$$
+Let's calculate the cdf via integration wrt x. The cdf is:
+
+$$
+\frac{1}{2}(x-1)^3 \ \ \ \ \ \ \ \ x \in [0,2] \\
+$$
+
+Now solve $u=\cdf_X(a)$
+
+$$
+u=\frac{1}{2}(x-1)^3 \\
+(2u)^{1/3}+1=x
+$$
+
+Checking the result empirically, we see high concordance between the true density (red) and that produced by the function of the random uniforms (blue)!
+
+```{r}
+xs<-runif(100000, min=0, max=1)
+ys<-(2*xs)^(1/3) + 1
+
+x<-seq(0, 2, by=0.01)
+y<-1.5*(x-1)^2
+
+density(ys, na.rm=TRUE) %>% plot(col="blue")
+lines(x, y, col="red")
+```
+
+::::
+
+::::: {.problem} 
+Suppose the goal is to sample $Y$, where
+\[
+\prob(Y = -1) = \prob(Y = 0) = 0.2, \ \prob(Y = 1) = \prob(Y = 2) = 0.3.
+\]
+
+Find a function $g$ such that for $U \sim \unifdist([0, 1])$, $g(U) \sim Y$.
+:::::
+
+::::{.solution}
+Using the climbing bars method:
+
+$$
+g(U)=-1 \cdot \ind(U \in [0, 0.2)) + 0 \cdot \ind(U \in [0.2, 0.4)) + 1 \cdot \ind(U \in [0.4, 0.7)) + 2 \cdot \ind(U \in [0.7, 1]) \\
+\boxed{g(U)=-1 \cdot \ind(U \in [0, 0.2)) + 1 \cdot \ind(U \in [0.4, 0.7)) + 2 \cdot \ind(U \in [0.7, 1])}
+$$
+
+::::
+
+
+::::: {.problem}   
+a. Find a function $g$ such that for $U \sim \unifdist([0, 1])$, $g(U)$ has density $f(s) = [0.5 - 0.1 s] \ind(s \in [-1, 1])$.
+
+b. Estimate $\var[X]$ using `var` with 1000 samples from density $f$.
+
+c. Find $\var[X]$ analytically as a check that your $g$ function is working.
+:::::
+
+::::{.solution}
+(a) Given $f(s) = [0.5 - 0.1 s] \ind(s \in [-1, 1])$, we need to first find the cdf.
+$F(s)=\int_{-1}^a 0.5-0.1s=[0.5s-0.05s^2]^a_{-1}=0.5a-0.05a^2 + 0.5 + 0.05=-0.05a^2+0.5a+0.55$
+
+Now set $U$ equal to the cdf and and solve for $g$:
+$$
+U=-0.05a^2+0.5a+0.55 \\
+20U=-a^2+10a+11 \\
+-20U=a^2-10a-11 \\
+0=a^2-10a-11+20U \\
+a=\frac{10 \pm \sqrt{100-4(-11+20U)}}{2}=5 \pm \sqrt{25+11-20U}=5 \pm \sqrt{36-20U}\\
+$$
+Note: we choose the minus version $\boxed{g(U)=5 - \sqrt{36-20U}}$ because it is the only version of the answer that provides us with solutions between $[-1, 1]$.
+
+```{r}
+set.seed(12345)
+xs<-runif(1000000, min=0, max=1)
+ys<-5-sqrt(36-20*xs)
+
+x<-seq(-1, 1, by=0.01)
+y<-0.5-0.1*x
+
+density(ys, na.rm=TRUE) %>% plot(col="blue")
+lines(x, y, col="red")
+```
+Validating the results empirically show that our function of the random uniform variables $g$ (shown in blue) generates data from our density of interest (red) over the desired interval!
+
+(b)
+```{r}
+set.seed(12345)
+xs<-runif(1000, min=0, max=1)
+ys<-5-sqrt(36-20*xs)
+var(ys)
+```
+Our estimate of the variance is the variance of our randomly generated variables from our distribution: $\boxed{0.3193}$.
+
+(c) Recall our density is: $f_X(x) = [0.5 - 0.1 x] \ind(x \in [-1, 1])$.
+It is known that: $\var[X]=E[X^2]-E[X]^2$ $\var[X]=E[(X-E[X])^2]$.
+$E[X]=\int_{-\infty}^{+\infty} x f_x(x) dx = \int_{-1}^{+1} x (0.5-0.1x) dx= -\frac{1}{15}$
+$\var[X]=E[(X-E[X])^2]=\int_{-\infty}^{+\infty} (x-E[X])^2 f_X(x)dx= \int_{-1}^{1} (x+\frac{1}{15})^2 (0.5 - 0.1 x) dx= \frac{74}{225} \approx \boxed{0.3289}$.
+
+Thus, our empirical estimate of the variance ($0.3193$) is quite close to the analytical variance ($0.3289$). Our solution works!
+::::
+
+
+

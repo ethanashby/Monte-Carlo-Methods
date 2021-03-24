@@ -1,0 +1,255 @@
+---
+title: "Midterm 1"
+author: "Ethan Ashby"
+date: "3/3/2021"
+output: html_document
+---
+
+Notes
+
+* You **must** show your work.  Answers that appear by themselves without supporting work will be penalized, even if correct.
+
+* You **must** box your final answer.  If you are preparing your exam in R Markdown, then code chunks are automatically considered boxed, but for other parts of your answer you should use `\boxed{}` in $\LaTeX$ or other methods to put a box around it.
+
+* Non integer numerical answers should be given to four significant digits.  Upper bounds should be rounded up, lower bounds rounded down.  Round other answers any way you wish.
+
+* You **are** allowed to use the book, the lecture readings, or any fixed knowledge site (such as Wikipedia or Wolfram MathWorld.)  You are also allowed to use R, as well as Wolfram Alpha for any mathematical computation needed (such as integration or optimization.)
+
+* You **cannot** use any social media or question and answer site, including (but not limited to) Quora, Chegg, Stack Overflow, Reddit.  If any part of any question appears on these sites, the whole test needs to be done over for everyone.  Moreover, submission to many of these sites is not purely anonymous, so please do not do this!
+
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\berndist}{\textsf{Bern}}
+\newcommand{\gammadist}{\textsf{Gamma}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\poisdist}{\textsf{Pois}}
+\newcommand{\cauchydist}{\textsf{Cauchy}}
+\newcommand{\tdist}{\textsf{t}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\negativebinomialdist}{\textsf{NegBin}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\conf}{\operatorname{conf}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(knitr)
+set.seed(123456789)
+```
+
+Place your name inside this box.
+
+```{r, echo = FALSE, fig.height = 1, fig.width = 3}
+ggplot() +
+  geom_rect(aes(xmin = 0, xmax = 1, ymin = 0, ymax = 3), color = "black", lwd = 1, alpha = 0) +
+  geom_text(aes(x = .1, y = 2.7, label = "Name")) +
+  theme_void()
+```
+
+# Key assumptions
+
+I assume that $a \pm b$ solutions are given to the second significant figure for the $b$ term. I also round up $b$ term to the second significant digit, as this represents an upper bound on the standard error term.
+
+# Problem 1
+
+Suppose $X$ has density 
+\[
+f_X(s) = \frac{3}{4 \sqrt{2}} \sqrt{s} \ind(s \in [0, 2]).
+\]
+
+Find a function $g$ such that for $U \sim \unifdist([0, 1])$, $g(U) \sim X$.
+
+### Problem 1 Solution
+
+We can solve this problem via the Inverse Transform Method. The first step in ITM is to find the cdf of X. We accomplish this via antidifferentiation:
+
+$$\int f_X(s) dx = \int_0^x \frac{3}{4 \sqrt{2}} \sqrt{s} \; ds = \bigg[ \frac{s^{3/2}}{2^{3/2}} \bigg]^x_0 = \frac{x^{3/2}}{2^{3/2}}$$
+
+Next, we set this expression equal to $U$ (from $U \sim \unifdist([0, 1])$), and solve as a function of $x$:
+$$
+\frac{x^{3/2}}{2^{3/2}} = U \longrightarrow x^{3/2} = 2^{3/2} \cdot U \longrightarrow x = (2^{3/2} \cdot U)^{2/3} \longrightarrow x=2 \cdot U^{2/3}
+$$
+$g(U) \sim X$ is achieved by setting $\boxed{g(U)=2 \cdot U^{2/3}}$.
+
+# Problem 2
+
+A standard Cauchy random variable $T$ has density
+\[
+f_T(t) = \frac{2}{\tau} \cdot \frac{1}{1 + t^2},
+\]
+where $\tau = 2\pi = 6.28318\ldots$ is the full circle constant.
+
+Using $10^5$ draws from the standard Cauchy distribution using `rcauchy`, estimate 
+\[
+\int_{-1 / 2}^{1} \frac{1}{1 + t^3} \ dt.
+\]
+For your answer, be sure to include your R code and your estimate as $a \pm b$.
+
+### Problem 2 Solution
+
+I'm going to approach this problem using importance sampling.
+
+This is the integral that we want: 
+\[
+\int_{-1 / 2}^{1} \frac{1}{1 + t^3} \ dt.
+\]
+
+If we can calculate this integral by finding the importance sampling function, $h(t)$ s.t. if $h(t)=\frac{g(t)}{f_T(t)}$ (and some technical conditions), then $\E[h(t)]=\int g(t) dt$.
+
+In this case, $g(t)=\frac{1}{1 + t^3} \ind[t \in [-1/2, 1]]$. We also know that $f_T(t) = \frac{2}{\tau} \cdot \frac{1}{1 + t^2}$. Therefore:
+$$h(t)=\frac{g(t)}{f_T(t)}=\frac{\frac{1}{1 + t^3} \ind[t \in [-1/2, 1]]}{\frac{2}{\tau} \cdot \frac{1}{1 + t^2}}=\frac{\tau}{2} \cdot \frac{(1 + t^2)}{(1 + t^3)} \ind[t \in [-1/2, 1]]$$
+$h(t)$ is our importance sampling function. We know that $\E[h(t)]=\int g(t) dt$. To find $\int g(t) dt$, we repeatedly sample from the density $f_T(t) \sim \cauchydist(0,1)$, calculate $h(t)$, and return the mean.
+
+```{r}
+set.seed(123456789)
+
+#h returns value if in range, 0 if not
+h<-function(t){
+  return(2*pi/2 * (1+t^2)/(1+t^3) * (t>=-0.5 & t<=1)) 
+}
+
+#generate standard cauchy rvs
+res<-rcauchy(10^5)
+
+#calculate values of h
+hs<-h(res)
+
+tibble(
+  mean=mean(hs),
+  se=sd(hs)/sqrt(length(hs))
+) %>% kable()
+```
+
+My estimate for the integral is $\boxed{1.3590 \pm 0.0053}$.
+
+# Problem 3
+
+Let $S = \{(x, y, z): x \in [0, 1], y \in [0, 1], z \in [0, 1], x + 2yz \leq 1\}$.
+
+a. Write R code to create an AR method for drawing uniformly from $S$.
+
+b. Use $10^5$ samples to estimate $\mean[XYZ]$ for $(X, Y, Z) \sim \unifdist(S)$. Report your answer as $a \pm b$.  
+
+### Problem 3 Solution
+
+a.
+```{r}
+ar_p3<-function(){
+  a<-FALSE
+  while(!a){
+    x<-runif(1)
+    y<-runif(1)
+    z<-runif(1)
+    a <- (x+2*y*z)<=1
+  }
+  return(c(x,y,z))
+}
+```
+
+b.
+```{r}
+set.seed(123456789)
+res<-replicate(10^5, ar_p3())
+
+xyz<-function(vec){return(vec[1]*vec[2]*vec[3])}
+
+XYZ_vals<-apply(res, FUN=xyz, MARGIN=2)
+
+tibble(
+  mean=mean(XYZ_vals),
+  se=sd(XYZ_vals)/sqrt(length(XYZ_vals))
+) %>% kable()
+```
+
+The AR estimate is $\boxed{0.034055 \pm 0.000098}$.
+
+
+# Problem 4 (Markov chains)
+
+Consider the following Markov chain step update function:
+```{r}
+step_midterm1 <- function(x, d, n) {
+  y = x + d
+  return(y * (y >= 1) * (y <= n) + x * (1 - (y >= 1) * (y <= n)))
+}
+```
+
+This chain is intended to have as input $n$ a positive integer and $d$ a random number with $\prob(d = -1) = 0.6$, $\prob(d = 1) = 0.4$.
+
+a. For what values of $x \in \{1, \ldots, n\}$ is there a positive chance that if $X_t = x$ then $X_{t + 1} = x$?
+
+b. If $n = 4$ and $X_t = 3$, what is the probability that $X_{t + 1} = 2$.
+
+c. For $n = 4$, run this as a Markov chain with 1000 burn in and 1000 data gathering steps to estimate $\mean[X_t]$.  Run your Markov chain 10 times and report your answer as $a \pm b$.
+
+### Problem 4 Solution
+
+a.Want to find what values of $x \in \{1, \ldots, n\}$ is there a positive chance that if $X_t = x$ then $X_{t + 1} = x$
+
+With positive probability, the random number $d=-1, 1$. This means $y=(x-1),(x+1)$ as defined in the Markov Chain function. 
+
+Suppose $y=(x-1)$. Then the markov chain returns state $X_{t+1}= y \cdot \ind[y \geq 1] \cdot \ind[y \leq n] + x \cdot (1-\ind[y \geq 1] \cdot \ind[y \leq n])$. In order for $X_{t+1}=x$, either $\ind[y \geq 1]=0$ OR $\ind[y \leq n]=0$. In the first case, $y=x-1 < 1 \Rightarrow x < 2$. In the second case, $y=x-1 > n \Rightarrow x > n+1$. The ladder case will never happen because $x \in \{1,\ldots,n \}$.
+
+Suppose instead that $y=(x+1)$. The markov chain from above remains the same. In order for $X_{t+1}=x$, either $\ind[y \geq 1]=0$ OR $\ind[y \leq n]=0$. In the first case, $y=x+1 < 1 \Rightarrow x < 0$. This is impossible because $x \in \{1,\ldots,n \}$. In the second case, $y=x+1 > n \Rightarrow x > n-1$.
+
+Therefore, we know that a positive chance of attaining a $X_{t+1}=x$ can be achieved through either $x>n-1$ OR $x<2$, depending on whether the $d$ term is positive or negative. In other words, the values of x that can possibly remain stationary after one step of the markov chain are $\boxed{x=1,n}$.
+
+b. If $n=4$ and $X_t=3$, we want to find probability of $X_{t + 1} = 2$. 
+
+First, consider the case where $d=-1$ (this has probability 0.6): then $X_{t+1}=2 \cdot \ind[2 \geq 1] \cdot \ind[2 \leq 4] + 3 \cdot (1-\ind[2 \geq 1] \cdot \ind[2 \leq 4])= 2 \cdot 1 \cdot 1 + 3 \cdot (1-1 \cdot 1)=2$. So when $d=-1$, $X_{t+1}=2$.
+
+Second, consider the case where $d=1$ (this has probability 0.4): then $X_{t+1}=4 \cdot \ind[4 \geq 1] \cdot \ind[4 \leq 4] + 3 \cdot (1-\ind[4 \geq 1] \cdot \ind[4 \leq 4])=4 \cdot 1 \cdot 1 + 3 \cdot (1-1 \cdot 1)=4$. So when $d=1$, $X_{t+1}=4$
+
+Thus, the probability that $X_{t+1}=2$ is equivalent to the probability that $d=-1$, which is $\boxed{\prob(X_{t+1}=2)=0.6}$.
+
+c.
+```{r}
+set.seed(123456789)
+run_markov_chain<-function(steps){
+  #burnin and datasteps
+  burnin<-steps
+  datasteps<-steps
+  #initialize results vector
+  res<-rep(0, datasteps)
+  #n=4
+  n=4
+  #starting value
+  x<-1
+  #draw your d variables for burnin
+  d_bi<-ifelse(runif(burnin)<=0.6, -1, 1)
+  #run your burnin steps
+  for(i in 1:burnin){
+    x<-step_midterm1(x, d_bi[i], n=n)
+  }
+  #draw data gathering d variables
+  d_dg<-ifelse(runif(datasteps)<=0.6, -1, 1)
+  #now run data gathering steps
+  for(i in 1:datasteps){
+    res[i]<-x[1]
+    x<-step_midterm1(x, d_dg[i], n=n)
+  }
+  return(res)
+}
+
+# run 10 times with 1000 burnin and data gathering steps
+
+ultimate_res<-replicate(10, run_markov_chain(steps=10^4))
+
+#find mean per run of markov chain
+tibble(
+  markov_mean=mean(ultimate_res),
+  markov_se=sd(ultimate_res)/sqrt(length(ultimate_res))) %>% kable()
+```
+
+My markov chain estimate of $\mean[X_t]=\boxed{2.0178 \pm 0.0034}$.
+

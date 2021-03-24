@@ -1,0 +1,92 @@
+---
+title: "Lab 1"
+author: "Ethan Ashby"
+date: "1/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars, include=FALSE}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE, fig.width=4, fig.height=16}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Emphasis given to *this* word. Fortune favors the **bold**.
+
+## lists
+
+* First
+* Second
+* Third
+
+* First
+
+* Second
+
+* Third
+
+1. First
+2. Second
+3. Third
+
+1. First
+1. second
+1. third
+
+## math
+
+This is inline math $a+b$
+
+$$a+b$$
+\( a+b \)
+
+\[ 
+a+b.
+\]
+
+$\sin(x)$
+$\geq$
+$\emptyset$
+
+## Code chunks and random
+
+```{r}
+sqrt(13)
+
+mean(runif(10))
+
+replicate(100, mean(runif(10)))
+```
+
+## functions
+
+```{r}
+add <- function(a = 2, b = 4) { s <- a + 2*b
+return(s)
+}
+
+add(0, 10)
+
+foo<-function(x,y){
+  return(x^y)
+}
+```
+

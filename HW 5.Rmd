@@ -1,0 +1,430 @@
+---
+title: 'Homework #5 Math 160'
+author: "Ethan Ashby"
+output: 
+  html_document:
+    css: ./homework-style.css
+---
+
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\berndist}{\textsf{Bern}}
+\newcommand{\gammadist}{\textsf{Gamma}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\poisdist}{\textsf{Pois}}
+\newcommand{\tdist}{\textsf{t}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\negativebinomialdist}{\textsf{NegBin}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\conf}{\operatorname{conf}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, fig.height = 3, fig.width = 5)
+#Color Format
+colFmt = function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt = function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\framebox{\\hspace*{1em} ", x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+library(tidyverse)
+```
+
+Due:  17 Mar, 2021
+
+1) Create solutions using `:::: {.solution}` and `::::` in the .Rmd file.
+
+2) If the .css file is not working for you, type out the Problem headings using `# Problem 1`, `# Solution`, `# Problem 2`, and so on.
+
+2) Knit to an .html file.
+
+3) Print out the .html file inside a browser (such as Chrome or Safari) to a .pdf file.
+
+4) Upload the .pdf file to Gradescope.
+
+5) Mark the pages that your questions are on.
+
+6) Be sure to box your answers with the `\boxed{put in box}` $\LaTeX$ command.
+
+7) Be sure to give nonintegral answers to four significant digits.
+
+```{r, echo = FALSE}
+set.seed(1234567)
+```
+
+
+::::: {.problem}
+Let $U \sim \unifdist(\{-1, 1\})$ and $T \sim \expdist(-1)$.  Then $W = UT$ has density
+\[
+f_W(w) = \frac{1}{2} \exp(-|w|).
+\]
+
+Using 1000 draws from $W$ and importance sampling, estimate the integral
+\[
+\int_{-\infty}^\infty \exp(-|s|^{3 / 2}) \ ds.
+\]
+Report your answer as $a \pm b$.
+::::: 
+
+::::{.solution}
+Solve via importance sampling. We want to find the value of this integral:
+\[
+\int_{-\infty}^\infty \exp(-|s|^{3 / 2}) \ ds.
+\]
+
+To do so, we realize that we must identify $h(x)$ s.t. :
+\[
+h(x)= \frac{g(x)}{F_X(x)}
+\]
+Where $g(x)$ is the integrand and $F_x(x)$ is the density of $X$.
+
+In the above scenario:
+\[
+h(w)= \frac{g(w)}{F_W(w)}=\frac{\exp(-|w|^{3 / 2}) \mathbb{I}(-\infty, \infty)}{\frac{1}{2} \exp(-|w|)}=2 \cdot \exp(-|w|^{3/2} + |w|) \mathbb{I}(-\infty, \infty)
+\]
+
+Now, to solve this problem, we must generate $W$ according to $W = UT$ and $U \sim \unifdist(\{-1, 1\})$ and $T \sim \expdist(-1)$.
+
+```{r}
+set.seed(1234567)
+Ts<-rexp(1000, 1)
+Us <- (runif(1000) > 0.5) * 2 - 1
+Ws<-Ts*Us
+h_W<-2*exp(-abs(Ws)^(3/2) + abs(Ws))
+tibble(
+  est_a = mean(h_W),
+  est_b = sd(h_W) / sqrt(1000)
+) %>% kable()
+```
+
+The approximate value of the integral is $\boxed{1.833 \pm 0.021}$.
+::::
+
+::::: {.problem}
+Suppose $U \sim \unifdist([0, 1])$ is a standard uniform, and $W = \floor{1 / U}$.  Use 1000 draws from $W$ and importance sampling to estimate the sum
+\[
+\sum_{i = 0}^\infty \sqrt{i}\left(\frac{1}{2}\right)^i.
+\]
+:::::
+
+::::{.solution}
+
+First the density of $W$ is needed.  Let $i \in \{0, 1, 2, \ldots\}$, then
+
+\begin{align*}
+\prob(X = i) &= \prob(\floor{1 / U} = i) \\
+  &= \prob(i \leq 1 / U < i + 1) \\
+  &= \prob\left(\frac{1}{i} \geq U > \frac{1}{i + 1} \right) \\
+  &= \frac{1}{i} - \frac{1}{i + 1} = \frac{1}{(i)(i + 1)}.
+\end{align*}
+
+Therefore, the importance sampling function is:
+\[
+h(i) = \frac{\sqrt{i}(1 / 2)^i}{1 / [i(i + 1)]} = i^{3 / 2}(i + 1)(1 / 2)^i.
+\]
+
+To generate samples:
+```{r}
+set.seed(1234567)
+n   <- 1000
+w   <- floor(1 / runif(n))
+h_w <- w^(3 / 2) * (w + 1) * (1 / 2)^w
+tibble(
+  est_a = mean(h_w),
+  est_b = sd(h_w) / sqrt(n)
+) %>% kable()
+```
+
+So the estimate is $\boxed{1.343 \pm 0.024}$.
+::::
+
+
+::::: {.problem}
+Consider the update function on state space $\{0, 1, \ldots, n - 1\}$ so that either adds 1 or subtracts 1 mod $n$ with probability 0.3, and with probability 0.4 stays where it is.  If $f(u) = \ind(u > 0.7) - \ind(u < 0.3)$, then this can be written as follows.
+\[
+\phi(x, u) = x + f(u) - n \ind(x + f(u) = n) + n \ind(x + f(u) = -1).
+\]
+Suppose $n = 10$.
+
+a. Write an $R$ function that takes a state $x$, standard uniform $u$, and $n$ and returns $\phi(x, u)$ over $\{0, \ldots, n - 1\}$.
+
+b. Given $X_0 = 0$, find $X_{100}$ 1000 times, and report an estimate for $\mean[X_{100}]$ as $a \pm b$.
+:::::
+
+::::{.solution}
+a.
+```{r}
+step_phi<-function(x, u, n=10){
+  f_u<-(u>0.7)-(u<0.4)
+  return(x+f_u-n*((x+f_u)==n)+n*(x+f_u==-1))
+}
+```
+b.
+```{r}
+set.seed(1234567)
+run_mchain<-function(steps=100){
+  #set initial state as x=0
+  x<-0
+  #generate random uniforms
+  u<-runif(steps)
+  for(i in 1:steps){
+    #step thru x using step_phi
+    x<-step_phi(x, u[i])
+  }
+  #return x
+  return(x)
+}
+
+X100s<-replicate(1000, run_mchain())
+tibble(
+    est_mean = mean(X100s),
+    est_err  = sd(X100s) / sqrt(length(X100s))
+) %>% kable()
+```
+So this gives $\boxed{4.570 \pm 0.091}$.
+::::
+
+::::: {.problem}
+Consider the transposition chain.  Suppose the goal is to use this chain to estimate $\prob(x(1) \leq x(n))$, where $x \sim \unifdist(\mathcal{S}_n)$.  For $n = 10$, and $t \in \{10, 50, 100\}$, try running a Markov chain for $t$ burn in steps and $t$ data collecting steps to estimate this probability.  
+
+Repeat your Markov chain runs 10 times and report your estimate as $a \pm b$.
+:::::
+
+::::{.solution}
+Code up the transposition chain step function
+```{r}
+step_trans <- function(x, i, j) {
+  x[c(i, j)] <- x[c(j, i)]
+  return(x)
+}
+```
+
+Now let's run burnin and data-gathering steps:
+
+```{r}
+data_trans<-function(steps, n){
+  #initialize step numbers
+  burnin<-steps
+  datasteps<-steps
+  #initialize vector of 1:n (1,2,...,10)
+  x <- 1:n
+  #initialize result vector
+  res <- rep(0, datasteps)
+  #generate indices to transpose
+  i_1 <- floor(runif(burnin) * n) + 1
+  j_1 <- floor(runif(burnin) * n) + 1
+  #burnin steps where you transpose pairs of indices
+  for (i in 1:burnin){
+    x <- step_trans(x, i_1[i], j_1[i])}
+  #generate data gathering transposition indices
+  i_2 <- floor(runif(datasteps) * n) + 1
+  j_2 <- floor(runif(datasteps) * n) + 1
+  #loop through, note if first entry is less than last entry, and transpose
+  for (i in 1:datasteps) {
+    res[i] <- (x[1] <= x[n])
+    x <- step_trans(x, i_2[i], j_2[i])
+  }
+  return(mean(res))
+}
+```
+
+```{r}
+set.seed(1234567)
+#run 10 times for various values of steps
+data10 <- replicate(10, data_trans(steps=10, n=10))
+data50 <- replicate(10, data_trans(steps=50, n=10))
+data100 <- replicate(10, data_trans(steps=100, n=10))
+```
+
+Now report results
+```{r}
+tibble(
+  n        = c(10, 10, 10),
+  t        = c(10, 50, 100),
+  est_mean = c(mean(data10), mean(data50), mean(data100)),
+  est_err  = c(sd(data10), sd(data50), sd(data100)) / sqrt(10)
+)
+```
+For $t=10$, my estimate is $\boxed{0.350 \pm 0.074}$. For $t=50$, my estimate is $\boxed{0.582 \pm 0.043}$. For $t=100$, my estimate is $\boxed{0.494 \pm 0.043}$.
+::::
+
+::::: {.problem}
+Suppose that $(X, Y)$ is uniform over the triangle in $\real^2$ with vertices $(0, 0)$, $(0, 1)$, and $(1, 1)$.  
+
+```{r, echo = FALSE, fig.height = 3, fig.width = 3}
+ggplot() +
+  geom_polygon(aes(x = c(0, 0, 1), y = c(0, 1, 1)), fill = "blue", alpha = 0.3, lwd = 2, color = "black")
+```
+
+
+a. What is the distribution of $X$ given $Y$?
+
+b. What is the distribution of $Y$ given $X$?
+:::::
+
+::::{.solution}
+a.
+The distribution of $X$ given $Y$ is $\boxed{[X \mid Y] \sim \unifdist([0, Y])}$. This is evident from the picture. At any particular $Y$ value, $X$ can range from $[0,Y]$.
+
+b.
+The distribution of $Y$ given $X$ is $\boxed{[Y \mid X] \sim \unifdist([X, 1])}$. This is evident from the picture. At any particular $X$ value, $Y$ can range from $[X,1]$.
+::::
+
+
+::::: {.problem}
+Suppose $\{X_i\}$ is a Markov chain has a stationary distribution over $\{0, 1, 2\}^{10}$ that is uniform over states with $\sum_{i = 1}^{10} X_i \leq 7$.  Steps in the chain connect any states, and the chain is aperiodic.  What can be said about the limiting distribution of the Markov chain, and how do you know this?
+:::::
+
+::::{.solution}
+The ergodic theorem says that markov chains that are both aperiodic and connected have unique stationary distributiosn that are also limiting distributions. Since $\{X_i\}$ is aperiodic, connected (you can get from any state to another other state), and has a stationary distribution uniform over states with $\sum_{i = 1}^{10} X_i \leq 7$ (over $\{0, 1, 2\}^{10}$), we conclude that **this distribution is also the limiting distribution of the markov chain.**
+::::
+
+::::: {.problem}
+Implement a random scan Gibbs sampler for a Markov chain which is uniform over 
+\[
+\Omega = \left\{(x_1, \ldots, x_{10}) \in \{0, 1, 2\}^{10} : \sum_{i = 1}^{10} x_i \leq 7\right\}
+\]
+as an update function in R that takes as input the current state `x`, a dimension `i` in $\{1, \ldots, 10\}$, and a standard uniform `u` and returns the next state of the chain.
+:::::
+
+:::: {.solution}
+Consider changing $x_i$ given current state $x$. You can change $x_i$ to 0, 1, or 2, as long as it does not make the sum too large.  Hence
+\[
+x_i \sim \unifdist\left(\{0, 1, 2\} \cap \left(-\infty, 7 - \sum_{j \neq i} x_i\right] \right)
+\]
+
+This can be implemented in R as follows.
+```{r}
+step_sum <- function(x, i, u) {
+  #identify the maximum value that x_i can take
+  m <- min(2, 7 - (sum(x) - x[i]))
+  x[i] <- floor((m + 1) * u)
+  return(x)
+}
+```
+::::
+
+
+::::: {.problem}
+Continuing the last problem, using 1000 burn in and 1000 data gathering steps, estimate $\sum_{i = 1}^{10} X_i$ for $(X_1, \ldots, X_{10}) \sim \unifdist(\Omega)$.  Repeat your Markov chain 5 times and report your estimate as $a \pm b$.
+:::::
+
+:::: {.solution}
+The following code accomplishes this:
+```{r}
+sum_data <- function(steps) {
+  #initialize number of steps
+  burnin    <- steps
+  datasteps <- steps
+  #initialize vector of 0's
+  x <- rep(0, 10)
+  #output dataset
+  res <- rep(0, datasteps)
+  #random uniforms
+  u_1 <- runif(burnin)
+  #indices
+  i_1 <- floor(runif(burnin) * 10) + 1
+  #loop through and step_sum
+  for (i in 1:burnin) 
+    x <- step_sum(x, i_1[i], u_1[i])
+  #datagather
+  u_2 <- runif(datasteps)
+  i_2 <- floor(runif(datasteps) * 10) + 1
+  for (i in 1:datasteps) {
+    res[i] <- sum(x)
+    x <- step_sum(x, i_2[i], u_2[i])
+  }
+  return(mean(res))
+}
+```
+
+Now to run and make estimates.
+```{r}
+set.seed(1234567)
+results <- replicate(5, sum_data(1000))
+tibble(
+  est_mean = mean(results),
+  est_err  = sd(results) / sqrt(length(results))
+) %>% kable()
+```
+
+Therefore, the estimate is $\boxed{6.085 \pm 0.045}$.
+::::
+
+::::: {.problem}
+Create a random scan Gibbs sampler that has stationary distribution uniform over the six dimensional unit hypersphere, that is 
+\[
+\{(x_1, \ldots, x_6) : x_1^2 + \cdots + x_6^2 \leq 1\}.
+\]
+
+Implement your sampler as an R function that inputs the current state `x`, a dimension `i`, a standard uniform `u`, and returns the next state in the Markov chain.
+:::::
+
+:::: {.solution}
+Fix $i \in \{1, \ldots, 6\}$.  Given the rest of the $x_j$ values for $j \neq i$, $x_j$ is uniform from positive 1 minus the sum of the squares of the rest of the components to the negative of that number.
+
+This can be implemented in R as follows:
+```{r}
+step_rs_hypersphere <- function(x, i, u) {
+  #maximum permissible value of x[i]
+  m <- 1 - (sum(x^2) - x[i]^2)
+  #return random value of x_i from -m to m
+  x[i] <- m*(2*u - 1)
+  return(x)
+}
+```
+::::
+
+
+::::: {.problem}
+Create a deterministic scan Gibbs sampler that has stationary distribution uniform over the six dimensional unit hypersphere, that is 
+\[
+\{(x_1, \ldots, x_6) : x_1^2 + \cdots + x_6^2 \leq 1\}.
+\]
+
+Implement your sampler step as an R function that inputs the current state `x`, a vector of six iid standard uniforms `u`, and returns the next state in the Markov chain.
+:::::
+
+:::: {.solution}
+A deterministic scan Gibbs sampler updates all the components in order.
+
+```{r}
+step_ds_hypersphere <- function(x, u) {
+  #initialize maximu, values for x_i
+  m <- rep(0, 6)
+  #step through indices
+  for (i in 1:6) {
+    #identify the maximum permitted value at each index
+    m[i] <- 1 - (sum(x^2) - x[i]^2)
+    #replace x[i] with random draw
+    x[i] <- 2 * m[i] * u[i] - m[i]
+  }
+  return(x)
+}
+```
+
+::::

@@ -1,0 +1,522 @@
+---
+title: 'Homework #3'
+author: "Ethan Ashby"
+output:
+  html_document:
+    css: ./homework-style.css
+  pdf_document: 
+    keep_tex:  TRUE
+---
+
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\var}{\mathbb{V}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\abs}{\operatorname{abs}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\sd}{\operatorname{SD}}
+\newcommand{\sqrtfcn}{\operatorname{sqrt}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+
+\renewcommand{\linethickness}{0.2mm}
+
+```{r setup, include=FALSE, warning = FALSE, message= FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+#Color Format
+colFmt = function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt = function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\fbox{",x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- boxFmt
+```
+
+Due:  Feb. 17, 2021
+
+We will need the following libraries for this homework.
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+The following ensures that the same random choices are made each time the document is knit.
+```{r}
+set.seed(12345)
+```
+
+
+Instructions:  
+
+1) Be sure to put the file `homework-style.css` in the parent directory of the directory where you have your .Rmd file.
+
+2) Put your solutions between the lines that read `:::: {.solution}` and `::::`.  
+
+3) Knit the file to .html.
+
+4) Print the file to .pdf using a browser.
+
+5) Upload your .pdf file to Gradescope.
+
+6) After you upload to Gradescope, you will be asked to mark the pages your problem solutions are on.
+
+7) Be sure to box your work with the `\boxed{put in box}` $\LaTeX$ command.
+
+8) Be sure to give nonintegral answers to four significant digits, except when the form is $a \pm b$.  In that case, give $b$ to two significant digits (rounded up) and give $a$ to the same number of *decimal places* as $b$ has.
+
+::::: {.problem}
+Suppose $(X, Y) \sim \unifdist(\{(x, y): x \in [0, 1], 0 \leq y \leq x^2\})$.  Find $\prob(Y \geq 1 / 2)$.
+:::::
+
+::::{.solution}
+Let's illustrate the scenario: the blue area constitutes potential values of $(X, Y)$. The red line corresponds to $Y=1/2$. We are interested in the proportion of curve's area that lies *above* that red line.
+```{r}
+x<-seq(0, 1, 0.01)
+y<-x^2
+
+ggplot()+geom_density(data=NULL, aes(x=x, y=y), stat="identity", fill="blue", alpha=0.5)+theme_minimal()+geom_hline(aes(yintercept=0.5), col="red")
+```
+
+Let's solve this problem analytically:
+First, integrate with respect to $X$ to get the total area underneath the curve:
+$\int_0^1 x^2 dx =[1/3x^3]^1_0=1/3$.
+
+Second, I'm going to find the area *below* the $Y=0.5$ in a piecewise fashion, by breaking up the area under the line into a portion of the curve and a rectangle:
+$A_{\textrm{below}}=(\int_0^{\sqrt{2}/2} x^2 dx) + (0.5 \cdot (1-\sqrt{2}/2)) = [\frac{1}{3} x^3]^{\sqrt{2}/2}_0 + 1/2 -\sqrt{2}/4 = \sqrt{2}/12 +1/2 -\sqrt{2}/4 = 0.2643$.
+
+The probability of $Y>=0.5$ will be the complement of the probability of the $Y<0.5$: $1-\frac{(\sqrt{2}/12 +1/2 -\sqrt{2}/4)}{(1/3)}=\boxed{0.2071}$.
+
+To confirm this analytical solution, I'll check my answer using uniform AR sampling from the unit square.
+
+```{r}
+set.seed(12345)
+ar_test <- function() { a <- FALSE
+  while (!a) {
+  p <- runif(2) # draw uniformly from $[0, 1]^2$
+  a <- (p[2]<=p[1]^2) } #tests if y<x^2
+  return(p) }
+
+xy_values<-replicate(10^5, ar_test())
+
+#count the number of y values that are greater or equal to 0.5, and divide by total points sampled
+length(which(xy_values[2,]>=0.5))/dim(xy_values)[2]
+```
+
+Thus, my AR estimate for the $\prob(Y \geq 1 / 2)=0.2081$. That's very close!
+::::
+
+
+::::: {.problem}
+Suppose that $X \sim \unifdist(\{1, \ldots, 20\})$ and it is possible to draw an iid sequence $X_1, X_2, \ldots$ from $X$.  
+
+a. Write pseudocode to draw samples from $Y \sim \unifdist(\{1, \ldots, 12\})$ using draws from $X$ and AR.
+
+b. On average, how many draws from $X$ does it take to get a draw from $Y$?
+:::::
+
+::::{.solution}
+
+part (a)
+
+```{r, eval=FALSE}
+draw_unif_12_alg($X$)
+1. Draw $X_1$ from $X \sim \unifdist(\{1, \ldots, 20\})$
+2. If $X_1 \in {1, \ldots 12}$, return $X_1$ and quit.
+3. Else, draw $Y$ according to draw_unif_12_alg($X$), return $Y$ and quit.  
+```
+part (b)
+
+The number of draws $N \sim \geodist(p_a)$ where $p_a=\frac{m(A)}{m(B)}$. In this case, $m$ denotes the counting measure, $A=\unifdist(\{1, \ldots, 12\})$ and $B=\unifdist(\{1, \ldots, 20\})$, so $p_a=3/5$. According to the geometric distribution $\mean{[N]}=\frac{1}{p_a}=\boxed{5/3}$ is the expected number of draws to draw from $Y$.
+::::
+
+::::: {.problem}
+Find $\argmax_{x > 0} x^{2 / 3} \exp(-x)$.
+:::::
+
+::::{.solution}
+Let's solve this analytically. We begin by taking thh derivative of the expression wrt x and set it equal to 0:
+$\frac{d}{dx}(x^{2/3} \exp(-x))= (x^{2/3} \cdot -\exp(-x)) + (2/3 x^{-1/3} \cdot \exp(-x))=(2/3 x^{-1/3} - x^{2/3}) \exp(-x)$
+To solve for argmax/argmin (i.e. x value that produced a maximum/minimum value of the objective function), set the derivative equal to 0:
+$$(2/3 x^{-1/3} - x^{2/3}) \exp(-x)=0 \\ (2/3 x^{-1/3} - x^{2/3})=0 \\ 2/3 x^{-1/3}= x^{2/3} \\ 2/3 = x$$
+Thus, the function $x^{2 / 3} \exp(-x)$ achieves a critical point at $x=2/3$. To confirm that this is indeed the argmax (rather than the argmin), I include a plot of the original function below, illustrating that $x=2/3$ produces a maximum:
+
+```{r, fig.height=2.5, fig.width=2.5, fig.align="center"}
+tibble(
+  x=seq(0, 5, by=0.1),
+  y=x^(2/3) * exp(-x)
+) %>% ggplot(aes(x=x, y=y))+geom_line()+geom_vline(aes(xintercept=2/3))
+```
+
+So $\argmax_{x > 0} x^{2 / 3} \exp(-x) = \boxed{2/3}$.
+::::
+
+::::: {.problem}
+To draw $(U, V)$ uniformly from the rectangle $[0, 1] \times [0, 1 / 2]$, use
+```{r}
+p <- c(runif(1), runif(1) * 1 / 2)
+```
+a. Using these draws, write AR code to draw $(X, Y)$ uniformly from the area $\{(x, y):0 \leq x \leq 1, 0 \leq y \leq x^2(1 - x)\}$.  
+
+b. Take 1000 draws and estimate the mean value of $X$.  Report your answer as $a \pm b$.
+
+c. Use the same draws to estimate the mean value of $Y$. Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+
+a.
+My function `ar_p4` does this 
+```{r}
+set.seed(12345)
+#my function ar does this sampling!
+ar_p4 <- function() { a <- FALSE
+  while (!a) {
+  p <- c(runif(1), runif(1) * 1 / 2) # draw uniformly from $[0, 1]^2$
+  a <- (p[2]<=p[1]^2*(1-p[1]))} #tests if y<x^2(1-x)
+  return(p) }
+```
+
+b.
+```{r}
+set.seed(12345)
+draws<-replicate(1000, ar_p4())
+#this returns the mean of all the x's
+mean(draws[1,])
+#this returns the SE estimate
+sd(draws[1,])/sqrt(dim(draws)[2])
+```
+Solution: $\boxed{0.5983 \pm 0.0062}$.
+
+c.
+```{r}
+#mean of all the y's
+mean(draws[2,])
+#this returns the SE estimate
+sd(draws[2,])/sqrt(dim(draws)[2])
+```
+Solution: $\boxed{0.0574 \pm 0.0012}$
+::::
+
+::::: {.problem}
+a. For $\Omega = \{(x, y):x \in [0, 1], 0 \leq y \leq x^2(1 - x)\}$, find the smallest value of $c$ such that $\Omega \subset [0, 1] \times [0, c]$.
+
+b. Using your $c$, write R code to generate from $\{(x, y):x \in [0, 1], 0 \leq y \leq x^2(1 - x)\}$ using AR.  Take 1000 draws from your method and estimate the mean value of $x$.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+
+a. 
+Finding the smallest value of $c$ such that $\Omega \subset [0, 1] \times [0, c]$ requires us to find the maximum of $\Omega$. We do so via optimization:
+At its maximum, $y=x^2(1 - x)$ for $x \in [0, 1]$. To solve for the critical values of $y$ over this domain, we take the derivative of $x^2(1 - x)$ and set equal to 0: $$\frac{d}{dx} (x^2 - x^3) = 2x-3x^2 =0 \\ x(2-3x)=0 \\ x=0, \frac{2}{3}$$
+Note that the second derivative $\frac{d^2}{dx}=2-6x$ is positive at $x=0$ and negative at $x=2/3$, implying that the curve is concave down, i.e. attains a maximum at $x=2/3$.
+To find the smallest $c$ needed to upper bound $\Omega$, we find the maximum value $y$ attain by with $x=2/3$. $y$ achieves its maximum in $\Omega$ when equal to $y \leq x^2(1 - x)$, so $c=(2/3)^2*(1-2/3)=\frac{4}{27}$, so $c=\boxed{\frac{4}{27}}$ is the smallest value required to upperbound $\Omega$.
+
+b.
+```{r}
+set.seed(12345)
+ar_p5 <- function() { a <- FALSE
+  while (!a) {
+  p <-c(runif(1, min=0, max=1), runif(1, min=0, max=4/27)) # draw uniformly from rectangle
+  a <- (p[2]<=p[1]^2*(1-p[1]))} #tests if y<x^2(1-x)
+  return(p) }
+
+xys<-replicate(1000, ar_p5())
+
+mean(xys[1,])
+sd(xys[1,])/sqrt(dim(xys)[2])
+```
+
+My estimate of the mean of $x$ for $(x,y) \in \Omega$ is $\boxed{0.6024 \pm 0.0063}$.
+::::
+
+::::: {.problem}
+a. Given $U \sim \unifdist([0, 1])$, how would you create a random variable $V \sim \unifdist([-1, 1])$ as a function of $U$?
+
+b. Using $V_1$ and $V_2$ iid $\unifdist([-1, 1])$ together with AR, write R code that samples a point $(X, Y)$ uniformly from the entire unit circle. 
+
+c. Simulate 1000 points uniformly from the unit circle to estimate the mean distance from the origin.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+a. 
+Per the lecture notes for 02/10/2020, if $U$ is standard uniform, then $(b-a)U+a \sim \unifdist([a,b])$. If we desire $V \sim \unifdist([-1, 1])$, we must set $b=1$ and $a=-1$ yielding $\boxed{V=2U-1}$.
+
+b.
+```{r}
+set.seed(12345)
+
+ar_unitcirc<-function(){
+  a <- FALSE
+  while (!a) {
+  V1_V2 <-c(2*runif(1)-1, 2*runif(1)-1) # draw uniformly from [-1, 1]^2
+  a <- (sum(V1_V2^2)<=1)} #tests if y<x^2(1-x)
+  return(V1_V2) }
+
+#returns one value
+ar_unitcirc()
+```
+The point sampled from the unit circle is $(0.4418, 0.7515)$.
+
+c.
+```{r}
+set.seed(12345)
+#generate points from inside unit circle
+unit_circ_pts<-replicate(1000, ar_unitcirc())
+
+#returns the distances from origin for each xy pair
+dists<-apply(unit_circ_pts, MARGIN=2, FUN=function(p){sqrt(sum(p^2))})
+
+#mean dist
+mean(dists)
+
+#sd dists
+sd(dists)/sqrt(length(dists))
+```
+The mean distance from the origin is $\boxed{0.6636 \pm 0.0075}$.
+::::
+
+::::: {.problem}
+In R, use `rexp(1, rate = 2)` to generate $T \sim \expdist(2)$, which has density
+\[
+f_T(t) = \exp(-2t) \ind(t \geq 0).
+\]
+
+a. Using draws from $T$ together with AR, write R code to generate instances of $W$ with unnormalized density
+\[
+f_W(w) = e^{-2} \ind(w \in [0, 1]) + \exp(-2w) \ind(w > 1).
+\]
+
+b. Using $10^5$ draws from $W$, estimate $\mean[W]$.  Report your answer as $a \pm b$.
+:::::
+
+::::{.solution}
+a.
+```{r}
+#helper functions for the two densities in question
+f_t<-function(t){exp(-2*t)}
+f_w<-function(w){ifelse(w<=1, exp(-2), exp(-2*w))}
+
+#ar function that draws from f_w with 
+ar_draw_fw<-function(){
+  a<-FALSE
+  while(!a){
+    t<-rexp(1,rate=2)
+    u<-runif(1)
+    a<- (u <= f_w(t)/f_t(t))
+  }
+  return(t)
+}
+```
+
+b.
+```{r}
+set.seed(12345)
+#10^5 draws from this distribution
+fw_draws<-replicate(10^5, ar_draw_fw())
+
+#mean draw
+mean(fw_draws)
+
+#sd draws
+sd(fw_draws)/sqrt(length(fw_draws))
+```
+
+My estimate of $\mean[W]=\boxed{0.8344 \pm 0.0019}$
+::::
+
+::::: {.problem}
+Consider the functions 
+\[
+f_X(s) = s \ind(s \in [0, 0.5)) + (1 - s) \ind(s \in [0.5, 1]).
+\]
+and 
+\[
+g(s) = s (1 - s):
+\]
+```{r, fig.height = 3, fig.width = 3}
+tibble(
+  x = seq(0, 1, by = 0.1),
+  f_X = x * (x >= 0) * (x < 0.5) + (1 - x) * (x >= 0.5) * (x <= 1),
+  g = x * (1 - x)
+) %>%
+  ggplot() +
+    geom_line(aes(x, f_X), lwd = 2, color = "blue") +
+    geom_line(aes(x, g), lwd = 2, color = "red")
+```
+
+Find $C$ such that $f(x) \leq C g(x)$ for all $x \in [0, 1]$.
+:::::
+
+::::{.solution}
+Our goal is to find $C$ such that $f(x) \leq C g(x)$. We can also do this by finding $C$ such that $\frac{f(x)}{g(x)} \leq C$.
+$$\frac{f(x)}{g(x)}=\frac{1}{1-s} \ind(s \in [0, 0.5)) + \frac{1}{s} \ind(s \in [0.5, 1]) \leq C$$
+
+Note that the maximum value of $\frac{f(x)}{g(x)}$ can take for $s \in [0.0.5)$ is 1 when $s=0$. The maximum value $\frac{f(x)}{g(x)}$ can take for $s \in [0.5, 1]$ is 2 when $s=0.5$. Thus, the smallest $C$ that ensures that $f(x) \leq C g(x)$ for all $x \in [0, 1]$ is $\boxed{C=2}$.
+
+We can verify this result visually too:
+```{r, fig.height = 3, fig.width = 3}
+tibble(
+  x = seq(0, 1, by = 0.1),
+  f_X = x * (x >= 0) * (x < 0.5) + (1 - x) * (x >= 0.5) * (x <= 1),
+  g = 2 * x * (1 - x)
+) %>%
+  ggplot() +
+    geom_line(aes(x, f_X), lwd = 2, color = "blue") +
+    geom_line(aes(x, g), lwd = 2, color = "red")
+```
+
+Looks good!
+::::
+
+::::: {.problem}
+Consider $X$ with the unnormalized density
+\[
+f_X(s) = s \ind(s \in [0, 0.5)) + (1 - s) \ind(s \in [0.5, 1]).
+\]
+
+a. Using draws from $T \sim \betadist(2, 2)$, write code to draw from $X$ using AR.  Make sure your code uses as few draws from $T$ on average as possible.
+
+b. Estimate $\prob(X \leq 1 / 4)$ using 1000 samples.  Report your result as $a \pm b$.
+:::::
+
+::::{.solution}
+
+a.
+I propose comparing $f_X$ to $C$ (where $C \sim \frac{\betadist(2, 2)}{3}$) because $C$ provides a tighter upperbound on $f_X$ (see green line in figure below), which will minimize the number of AR draws needed to sample from $f_X$. In fact, by considering $C$, the expected number of draws $\mean[N]=\frac{1/2}{1/3}=1.5$.
+
+```{r, fig.height = 3, fig.width = 3}
+tibble(
+  x = seq(0, 1, by = 0.1),
+  f_X = x * (x >= 0) * (x < 0.5) + (1 - x) * (x >= 0.5) * (x <= 1),
+  g = dbeta(x, 2, 2), 
+  g_trans= dbeta(x, 2, 2)/3
+) %>%
+  ggplot() +
+    geom_line(aes(x, f_X), lwd = 2, color = "blue") +
+    geom_line(aes(x, g), lwd = 2, color = "red") +
+    geom_line(aes(x, g_trans), lwd = 2, color = "green")
+```
+
+The following code draws from $X$ using AR, while comparing the $f_X$ to $T/3$.
+
+```{r}
+#helper functions
+f_x<-function(x){x * (x >= 0) * (x < 0.5) + (1 - x) * (x >= 0.5) * (x <= 1)}
+
+X_ar<-function(){
+  a<-FALSE
+  while(!a){
+    #randomly sample T from beta distribution
+    t<-rbeta(1,2,2)
+    #get the associated height on the beta distribution for T
+    associated_y<-dbeta(t, 2, 2)
+    #calculate C, the height on the transformed density with tighter ub
+    C=(associated_y/3)
+    #draw random uniform to compare to
+    u<-runif(1)
+    #test if we pass unif threshold with the y/3 as comparison
+    a<- (u <= f_x(t)/C)
+  }
+  return(t)
+}
+```
+
+b.
+```{r}
+set.seed(12345)
+samps<-replicate(1000, X_ar())
+#estimate prob X<=0.25
+mean(samps<=0.25)
+#estimate sd of prob
+sd(samps<=0.25)/sqrt(length(samps))
+```
+
+My probability estimate for $\prob[X<0.25]$ is $\boxed{0.116 \pm 0.010}$. 
+::::
+
+::::: {.problem}
+Suppose that $Z \sim \normaldist(0, 1)$, and so has density
+\[
+f_Z(z) = \frac{1}{\sqrt{\tau}} \exp(-z^2 / 2).
+\]
+Then for $W = \abs(Z)$, a quick transformation shows that the unnormalized density of $W$ is 
+\[
+f_W(w) = \exp(-w^2 / 2)\ind(w \geq 0).
+\]
+
+a. Use draws from $T \sim \expdist(1)$ together with AR to write $R$ code to draw from $W$.
+
+b. Use your code to estimate $\prob(W \leq 2)$ with 1000 samples.  Report your results as $a \pm b$.
+:::::
+
+::::{.solution}
+a.
+Step 1, let's plot these distributions and see what we're working with
+```{r, fig.height = 3, fig.width = 3}
+tibble(
+  w = seq(0, 10, by = 0.1),
+  f_w = exp(-(w^2)/2),
+  g = dexp(w, rate=1),
+  g_trans=1.75*dexp(w, rate=1)
+) %>%
+  ggplot() +
+    geom_line(aes(w, f_w), lwd = 1, color = "blue") +
+    geom_line(aes(w, g), lwd = 1, color = "red") +
+    geom_line(aes(w, g_trans), lwd = 1, color = "magenta")
+```
+
+I heuristically chose $C \sim 1.75*\expdist(x)$ as my upper bound for $f_W$ because it gives a tight UB.
+
+```{r}
+#helper function
+f_w<-function(w){exp(-w^2/2)}
+
+ar_w<-function(){
+  a<-FALSE
+  while(!a){
+    #randomly sample from expdist
+    w<-rexp(1, rate=1)
+    #get the associated height on the beta distribution
+    associated_y<-dexp(w, rate=1)
+    #calculate C, which upper bounds f_w
+    C=1.75*associated_y
+    #draw random uniform to compare to
+    u<-runif(1)
+    #test if we pass unif threshold with the y/3 as comparison
+    a<- (u <= f_w(w)/(C))
+  }
+  w
+}
+```
+
+```{r}
+set.seed(12345)
+ws<-replicate(1000, ar_w())
+#prob that W <= 2
+mean(ws<=2)
+#sd
+sd(ws<=2)/sqrt(length(ws))
+```
+
+The $\prob[W \leq 2]=\boxed{0.9590 \pm 0.0063}$.
+::::

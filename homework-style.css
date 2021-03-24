@@ -1,0 +1,66 @@
+body {
+  counter-reset: defn-counter 0 fact-counter 0 exam-counter 0 problem-counter 0 notation-counter 0 rule-counter 0 thm-counter 0;
+}
+
+.problem {
+    display: inline-block;
+    margin-left: 45px;
+    padding-top: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    /*	border-top:  solid #909030;
+	borde	     r-bottom: solid #909030;*/
+    margin-bottom: 25px;
+    width: 750px;
+}
+
+.problem::before{
+    margin-left: 0px;
+    content:  "Problem " counter(problem-counter);
+    counter-increment: problem-counter;
+    font-size:  14pt;
+    font-family:  Arial;
+    font-weight: bold;
+    color: rgba(0, 0, 255, 0.6);
+    display: inline;
+}
+
+.solution {
+    /*    display: none;*/
+    display: block;
+    margin-left: 45px;
+    padding-left: 5px;
+    padding-bottom: 2em;
+}
+.solution::before{
+    margin-left: 0px;
+    padding: 0em;
+    content:  "Solution ";
+    color: rgba(255, 0, 0, 0.6);
+    font-weight: bold;
+    font-size: 14pt;
+}
+
+.boxed {
+    border: 1px solid green;
+}
+
+.centerboxed {
+    background: #fcf8e3;
+    color: black; 
+    border-radius: 5px; 
+    padding: 3px;
+    border: 2px solid green;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 10px;
+}
+
+.widthquarter {
+    width: 25%;
+}
+
+.widthhalf {
+    width: 50%;
+}
