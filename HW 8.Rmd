@@ -1,0 +1,480 @@
+---
+title: 'Homework #8 Math 160'
+author: "Ethan Ashby"
+output: 
+  html_document:
+    css: ./homework-style.css
+---
+
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\berndist}{\textsf{Bern}}
+\newcommand{\gammadist}{\textsf{Gamma}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\poisdist}{\textsf{Pois}}
+\newcommand{\tdist}{\textsf{t}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\negativebinomialdist}{\textsf{NegBin}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\conf}{\operatorname{conf}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+\newcommand{\asin}{\operatorname{asin}}
+\newcommand{\acos}{\operatorname{acos}}
+\newcommand{\mrrtt}{\textsf{M}\textsf{R}^2\textsf{T}^2}
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, fig.height = 3, fig.width = 5)
+#Color Format
+colFmt <- function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt <- function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\framebox{\\hspace*{1em} ", x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- function(x) boxFmt(x)
+library(tidyverse)
+```
+
+Due:  31 Mar, 2021
+
+1) Create solutions using `:::: {.solution}` and `::::` in the .Rmd file.
+
+2) If the .css file is not working for you, type out the Problem headings using `# Problem 1`, `# Solution`, `# Problem 2`, and so on.
+
+2) Knit to an .html file.
+
+3) Print out the .html file inside a browser (such as Chrome or Safari) to a .pdf file.
+
+4) Upload the .pdf file to Gradescope.
+
+5) Mark the pages that your questions are on.
+
+6) Be sure to box your answers with the `\boxed{put in box}` $\LaTeX$ command.
+
+7) Be sure to give nonintegral answers to four significant digits.
+
+```{r, echo = FALSE}
+set.seed(1234567)
+```
+
+::::: {.problem}
+Consider the following simple symmetric random walk that takes as input \( x \in \{1, 2, 3, 4, 5\} \), \( m \in \{-1, 1\} \), and returns \( x \) if \(x + m \notin \{1, \ldots, 5\} \), and \( x + m \) otherwise.
+
+```{r}
+step_ssrwwprb <- function(x, m) {
+  y <- x + m
+  if (y < 1 | y > 5)
+    return(x)
+  else
+    return(y)
+}
+```
+
+Prove that this update is monotonic by showing that for \( x \leq w \) and \( m \in \{-1, 1\} \), it holds that 
+\[
+\texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}.
+\]
+
+(Hint:  consider cases \( y = 0 \), \( z = 6 \), and \( (1 \leq y) \wedge (z \leq 5) \).)
+:::::
+
+::::{.solution}
+We want to prove that the update is monotonic by showing that for \( x \leq w \) and \( m \in \{-1, 1\} \), it holds that $\texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$.
+
+We'll prove this statement by breaking up into cases.
+
+Case (i): suppose $x,w \in \{2,3,4\}$. Then for $m=-1$, $\texttt{step_ssrwwprb(x, m)}=x-1$ and $\texttt{step_ssrwwprb(w, m)}=w-1$. Since $x \leq w$, $x-1 \leq w-1 \Rightarrow \texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$. The same holds for if $m=+1$, $\texttt{step_ssrwwprb(x, m)}=x+1$ and $\texttt{step_ssrwwprb(w, m)}=w+1$.  Since $x \leq w$, $x+1 \leq w+1 \Rightarrow \texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$. We've proved the desired condition.
+
+Case (ii): suppose $x=1$ and $w \in \{1, \ldots , 5\}$. 
+Then for $m=-1$, $\texttt{step_ssrwwprb(x, m)}=1$. Since the output of the step function must be in $\{1, \ldots, 5\}$, $1 \leq \texttt{step_ssrwwprb(w, m)}$. Thus, we conclude that $1=\texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$. 
+For $x=1$ and $m=+1$, $\texttt{step_ssrwwprb(x, m)}=2$. Since $1 \leq w \Rightarrow 2 \leq w+1 \Rightarrow \texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$. We've shown the desired condition.
+
+Case (iii) suppose $w=5$ and $x \in \{1, \ldots , 5\}$. 
+Then for $m=-1$, $w-1=\texttt{step_ssrwwprb(w, m)}=4$. Since $x \leq w$, then $x-1 \leq w-1$ so necessarily $\texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$. In the case where $m=+1$, $\texttt{step_ssrwwprb(w, m)}=5$. But since $\texttt{step_ssrwwprb(x, m)} \in \{1, \ldots, 5\}$, then by necessity $\texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}=5$.
+
+Thus, in all cases, we showed that \( x \leq w \) implies $\texttt{step_ssrwwprb(x, m)} \leq \texttt{step_ssrwwprb(w, m)}$. So we've proved monotonicity.
+::::
+
+::::: {.problem}
+Continuing the last problem, run \( \texttt{step_ssrwwprb} \) forward from state 1 and state 5 for \( t \) steps.  
+
+a. Plot the results of your run for \( t = 10 \).
+
+b. Plot the results of your run for \( t = 100 \).
+:::::
+
+::::{.solution}
+a. Run 10 steps
+```{r}
+set.seed(1234567)
+run_twochains<-function(steps){
+  moves<-2*(runif(steps)<0.5)-1
+  x1_vec<-c(1)
+  for(i in 1:steps)
+    x1_vec<-c(x1_vec, step_ssrwwprb(x1_vec[i], moves[i]))
+  x2_vec<-c(5)
+  for(i in 1:steps)
+    x2_vec<-c(x2_vec, step_ssrwwprb(x2_vec[i], moves[i]))
+  return(cbind(t=0:steps, lower=x1_vec, upper=x2_vec) %>% as.data.frame())
+}
+
+run_twochains(steps=10) %>% ggplot()+geom_line(aes(x=t, y=lower), color="red")+geom_line(aes(x=t, y=upper), color="blue")+theme_minimal()+ylab("Value")
+```
+
+b. Run 100 steps
+```{r}
+run_twochains(steps=100) %>% ggplot()+geom_line(aes(x=t, y=lower), color="red")+geom_line(aes(x=t, y=upper), color="blue")+theme_minimal()+ylab("Value")
+```
+
+Note that the two curves couple after 20 time steps or so!
+::::
+
+::::: {.problem}
+Consider the following product slice sampler with stationary distribution density proportional to
+\[
+g_X(x) = \sin(x) \cos(x)^2 \ind(x \in [0, \tau / 4]).
+\]
+
+```{r}
+step_trig_pss <- function(x, u) {
+  y <- u[1:3] * c(sin(x), cos(x), cos(x))
+  x <- u[4] * (min(acos(y[2:3])) - asin(y[1])) + asin(y[1])
+  return(x)
+}
+```
+
+Prove directly that for \( x \leq w \) and \( u \in [0, 1]^4 \) that \( \texttt{step_trig_pss(x, u)} \leq \texttt{step_trig_pss(w, u)} \).
+:::::
+
+::::{.solution}
+Say $x \leq w$. Then define $y_1=u_1 \sin(x)$, $y_2 = u_2 \cos(x)$, $y_3=u_3 \cos(x)$. Similarly, let $z_1=u_1 \sin(w)$, $z_2 = u_2 \cos(w)$, $z_3=u_3 \cos(w)$. In this case, $y_1 \leq z_1$, $y_2 \geq z_2$, $y_3 \geq z_3$ (because sine is an increasing function over $[0, \tau/4]$ and cosine is decreasing over $[0, \tau/4]$).
+
+Note that \[x=u_4 \cdot (\min(\arccos(y_2), \arccos(y_3)) - \arcsin(y_1)) + \arcsin(y_1)\].
+\[x=u_4 \min(\arccos(y_2), \arccos(y_3)) + (1-u_4) \arcsin(y_1)\].
+
+Now $y_1 \leq z_1 \Rightarrow \arcsin(y_1) \leq \arcsin(z_1)$ (b/c arcsine is increasing function).
+$y_2 \geq z_2 \Rightarrow \arccos(y_2) \leq \arccos(z_2)$ (b/c arccos is decreasing function).
+$y_3 \geq z_3 \Rightarrow \arccos(y_3) \leq \arccos(z_3)$ (b/c arccos is decreasing function).
+This implies that:
+\[u_4 \min(\arccos(y_2), \arccos(y_3)) + (1-u_4) \arcsin(y_1) \leq u_4 \min(\arccos(z_2), \arccos(z_3)) + (1-u_4) \arcsin(z_1)\] which implies
+\[\texttt{step_trig_pss(x, u)} \leq \texttt{step_trig_pss(w, u)}\]
+::::
+
+::::: {.problem}
+Continuing the last problem, start with \( X_0 = 0 \) and \( W_0 = 1 \) and find \( X_{10} \) and \( W_{10} \) using the same random numbers.  Repeat this \( 1000 \) times and report the average of the difference \( W_{10} - X_{10} \) as \( a \pm b \).
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+run_chains_p4<-function(steps){
+  #uniforms
+  us<-replicate(4, runif(steps))
+  
+  #lower chain
+  x=0
+  #upper chain
+  w=1
+  for(i in 1:steps){
+    x<-step_trig_pss(x, us[i,])
+    w<-step_trig_pss(w, us[i,])
+  }
+  #return difference in w and x
+  return(w-x)
+}
+
+diffs<-replicate(1000, run_chains_p4(10))
+
+tibble(
+  mean=mean(diffs),
+  se=sd(diffs)/sqrt(length(diffs))
+) %>% kable()
+```
+The estimate of the difference \( W_{10} - X_{10} \) is $\boxed{0.000407 \pm 0.000038}$
+::::
+
+
+::::: {.problem}
+Continuing the last problem, use \( W_{25} \) and \( X_{25} \) to estimate the mean of a draw from the density \( \sin(x) \cos(x)^2 \ind(x \in [0, \tau / 4]) \).  Report the upper bound and lower bound on the estimate.
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+run_chains_p5<-function(steps){
+  #uniforms
+  us<-replicate(4, runif(steps))
+  #lower chain
+  x=0
+  #upper chain
+  w=1
+  for(i in 1:steps){
+    x<-step_trig_pss(x, us[i,])
+    w<-step_trig_pss(w, us[i,])
+  }
+  #return difference in w and x
+  return(c(x, w))
+}
+
+res<-replicate(1000, run_chains_p5(steps=25))
+
+tibble(
+  est_mean_lower=mean(res[1,]), 
+  est_sd_lower= sd(res[1,])/sqrt(length(res[1,])),
+  est_mean_upper=mean(res[2,]),
+  est_sd_upper=sd(res[2,])/sqrt(length(res[2,]))
+) %>% kable()
+```
+
+My estimate for the upper and lower bound of the estimate are $[0.6789 \pm 0.0093, 0.6789 \pm 0.0093]$.
+::::
+
+::::: {.problem}
+Continuing the last problem, use 1000 replications of states \( X_{5} \) and \( W_{5} \) states to give an upper and lower bound on an estimate of \( \prob(A \leq 0.3) \) where \( A \) is a draw from the density \( \sin(x) \cos(x)^2 \ind(x \in [0, \tau / 4]) \).
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+chain_next<-function(steps){
+  datasteps <- steps
+  a <- 0
+  b <- 1
+  res<-rep(0, datasteps)
+  u1 <- matrix(runif(4 * datasteps), ncol = 4)
+  for (i in 1:datasteps) {
+    a <- step_trig_pss(a, u1[i,])
+    b <- step_trig_pss(b, u1[i,]) 
+    #outputs 1 if interval is squarely below 0.3, outputs 0 if interval is squarely above 0.3, -1 if maybe
+    res[i]<-(b<=0.3) - (a < 0.3)*(b > 0.3)
+  }
+  #u2 <- matrix(runif(4 * datasteps), ncol = 4) 
+  #for (i in 1:steps) {
+  #  a <- step_trig_pss(a, u2[i,])
+  #  b <- step_trig_pss(b, u2[i,])
+  #  res[i] <- (b <= 0.3) - (a < 0.3) * (b > 0.3)
+  #  }
+  return(res) 
+}
+
+res<-replicate(1000, chain_next(steps=5)[5])
+
+tibble(
+  est_mean_a=mean(res==1),
+  est_sd_a=sd(res==1)/sqrt(length(res)),
+  est_mean_b=mean(res==1 | res==-1),
+  est_sd_b=sd(res==1 | res==-1)/sqrt(length(res))
+) %>% kable()
+```
+
+Our estimate for \( \prob(A \leq 0.3) = \boxed{[0.123 \pm 0.011, 0.139 \pm 0.011]}\).
+::::
+
+
+::::: {.problem}
+Continuing the last problem, use \( X_{11}, \ldots, X_{20} \) and \( W_{11}, \ldots, W_{20} \) to estimate \( \prob(A \leq 0.3) \).  Replicate the result 1000 times to get the estimate.
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+chain_next<-function(steps){
+  datasteps <- steps
+  a <- 0
+  b <- 1
+  res <- rep(0, datasteps)
+  u2 <- matrix(runif(4 * datasteps), ncol = 4) 
+  for (i in 1:steps) {
+    a <- step_trig_pss(a, u2[i,])
+    b <- step_trig_pss(b, u2[i,])
+    res[i] <- (b <= 0.3) - (a < 0.3) * (b > 0.3)
+    }
+  return(res) 
+}
+
+res<-replicate(1000, chain_next(steps=20)[11:20])
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+
+My estimate of $\prob(A \leq 0.3) = \boxed{0.1305 \pm 0.0034}$.
+::::
+
+::::: {.problem}
+Consider a simple nonsymmetric random walk with partially reflecting boundaries on \( \Omega = \{1, \ldots, 5 \} \).  
+
+```{r}
+step_srwwprb <- function(x, m) {
+  y <- x + m
+  if (y < 1 | y > 5)
+    return(x)
+  else
+    return(y)
+}
+```
+
+After 10000 steps of burnin, take 10000 steps in this chain with \( \prob(m = -1) = 0.4,\ \prob(m = 1) = 0.6 \) and plot a histogram of the states obtained.
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+run_chain_p8<-function(steps){
+  burnin=steps
+  datasteps=steps
+  m1<-2*(runif(burnin)<0.6)-1
+  x=1
+  for(i in 1:burnin){
+    x<-step_srwwprb(x, m1[i])
+  }
+  
+  res<-rep(0, datasteps)
+  m2<-2*(runif(datasteps)<0.6)-1
+  for(i in 1:datasteps){
+    x<-step_srwwprb(x, m2[i])
+    res[i]<-x
+  }
+  return(res)
+}
+
+res<-run_chain_p8(steps=10^5)
+data.frame(val=res) %>% ggplot()+geom_histogram(aes(x=val))+theme_minimal()
+```
+::::
+
+
+::::: {.problem}
+Using the chain from the previous problem as a proposal chain, build a Metropolis-Hastings update for the unnormalized density
+\[
+h_X(i) = i \ind(i \in \{1, \ldots, 5\}).
+\]
+
+After 10000 steps of burnin, take 10000 steps in this chain with \( \prob(m = -1) = 0.4,\ \prob(m = 1) = 0.6 \) and plot a histogram of the states obtained.
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+#step function
+step_p8<-function(x, m, u){
+  y<-x+m
+  if(u <= (y*(y>0)*(y<6)/x))
+    return(y)
+  else
+    return(x)
+}
+
+chain_p8<- function(steps){ 
+  burnin <- steps
+  datasteps <- steps
+  x <- 3
+  res <- rep(0, datasteps)
+  
+  #burnin
+  m1 <- 2 * (runif(burnin) < 0.6) - 1 
+  u1 <- runif(burnin)
+  for (i in 1:burnin) {
+    x <- step_p8(x, m1[i], u1[i]) 
+  }
+  
+  m2 <- 2 * (runif(burnin) < 0.5) - 1 
+  u2 <- runif(burnin)
+  for (i in 1:datasteps) {
+    x <- step_p8(x, m2[i], u2[i]) 
+    res[i] <- x
+  }
+  return(res) 
+}
+
+tibble(
+  x=chain_p8(steps=10^5)
+) %>% ggplot()+geom_histogram(aes(x=x))+theme_minimal()
+```
+
+::::
+
+::::: {.problem}
+Consider the unnormalized density 
+\[
+g_X(s) = \exp(-s^{3 / 2}) \ind(s \geq 0).
+\]
+
+a. Write code for a Metropolis-Hastings step with proposal move \( Y = X + M \) where \( M \sim \unifdist([-2, 1]) \).  
+
+b. Use your code with 10 replications of 1000 burnin and data gathering steps to estimate \( \mean[X] \).  Report your result as \( a \pm b \).
+:::::
+
+::::{.solution}
+a.
+
+```{r}
+step_p10<-function(x, m, u){
+  y<-x+m
+  if(u <= (y>=0)*exp(-(y*(y>=0))^(3/2))/(exp(-x^(3/2))))
+    return(y)
+  else
+    return(x)
+}
+```
+
+b.
+
+```{r}
+set.seed(1234567)
+chain_p10<-function(steps){
+  burnin=steps
+  datasteps=steps
+  m1<-3*runif(burnin)-2
+  u1<-runif(burnin)
+  x<-0
+  for(i in 1:burnin){
+    x<-step_p10(x, m1[i], u1[i])
+  }
+  
+  res<-rep(0, datasteps)
+  m2<-3*runif(burnin)-2
+  u2<-runif(burnin)
+  for(i in 1:datasteps){
+    x<-step_p10(x, m2[i], u2[i])
+    res[i]<-x
+  }
+  
+  return(res)
+}
+
+res<-replicate(10, mean(chain_p10(steps=1000)))
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+
+My estimate of $\mean[X]=\boxed{0.5272 \pm 0.0090}$.
+::::

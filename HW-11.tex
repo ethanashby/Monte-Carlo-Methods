@@ -1,0 +1,262 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Homework \#11 Math 160},
+  pdfauthor={Ethan Ashby},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Homework \#11 Math 160}
+\author{Ethan Ashby}
+\date{}
+
+\begin{document}
+\maketitle
+
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\berndist}{\textsf{Bern}}
+\newcommand{\gammadist}{\textsf{Gamma}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\poisdist}{\textsf{Pois}}
+\newcommand{\tdist}{\textsf{t}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\negativebinomialdist}{\textsf{NegBin}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\conf}{\operatorname{conf}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+\newcommand{\asin}{\operatorname{asin}}
+\newcommand{\acos}{\operatorname{acos}}
+\newcommand{\mrrtt}{\textsf{M}\textsf{R}^2\textsf{T}^2}
+\newcommand{\cov}{\operatorname{cov}}
+\newcommand{\var}{\mathbb{V}}
+
+Due: 5 May, 2021
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi})}
+\item
+  Create solutions using \texttt{::::\ \{.solution\}} and \texttt{::::}
+  in the .Rmd file.
+\item
+  If the .css file is not working for you, type out the Problem headings
+  using \texttt{\#\ Problem\ 1}, \texttt{\#\ Solution},
+  \texttt{\#\ Problem\ 2}, and so on.
+\item
+  Knit to an .html file.
+\item
+  Print out the .html file inside a browser (such as Chrome or Safari)
+  to a .pdf file.
+\item
+  Upload the .pdf file to Gradescope.
+\item
+  Mark the pages that your questions are on.
+\item
+  Be sure to box your answers with the
+  \texttt{\textbackslash{}boxed\{put\ in\ box\}} \(\LaTeX\) command.
+\item
+  Be sure to give nonintegral answers to four significant digits.
+\end{enumerate}
+
+\textbf{The binomial model} A stock follows a binomial model for two
+periods. At each time, \(\mathbb{P}(S_{t + 1} = u S_t) = p\), and
+\(\mathbb{P}(S_{t + 1} = d S_t) = 1 - p\). Suppose \(S_0 = \$100\),
+\(p = 0.6\), \(u = 1.1\), and \(d = 0.95\).
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi}.}
+\item
+  Analytically, what is the expected value of the stock after two time
+  periods to the nearest penny?
+\item
+  Suppose we have a European call option that has exercise time 2 and
+  strike price 105. So the value of the call at time 2 is \[
+   C_2 = (S_2 − 105)^+.
+   \] What is \(\mathbb{E}[C_2|S_0 = 100]\) to the nearest penny?
+\end{enumerate}
+
+Continuing the last problem, suppose that the risk neutral equivalent
+martingale measure of \(p^* = 1 / 3\) is used in the binomial model.
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi}.}
+\item
+  Using \(p^* = 1 / 3\), what is the the mean of \(S_2\) given
+  \(S_0 = 100\).
+\item
+  Using \(p^* = 1 / 3\), what is the mean of \(C_2\) given
+  \(S_0 = 100\). (Notice that this gives the price \(C_0\) in an
+  arbitrage free market.)
+\end{enumerate}
+
+A stock follows a binomial model with \(u = 1.03\) and \(d = 0.9\)for
+ten periods. What is the chance that the stock is higher priced than
+when it started written as a polynomial in \(p\)?
+
+Suppose that at each time step \(t\), a stock moves from \(S_{t - 1}\)
+to \(S_t = 1.2 S_{t - 1}\) with probability 50\% and down to
+\(S_t = 0.9 S_{t - 1}\) with probability 50\%.
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi}.}
+\item
+  What is \(\mathbb{E}[S_1 \mid S_0]\)?
+\item
+  What is \(\mathbb{E}[S_2 \mid S_0]\)?
+\item
+  If the probability of going up is changed to \(p^*\), what should
+  \(p^*\) be to make the process a martingale?
+\end{enumerate}
+
+Consider a European call option based on a stock that obeys a binomial
+model with parameters \(u\) and \(d\), strike price \(K\) and exercise
+time \(t\). The value of the call at time \(t\) is \[
+C_t = (S_t - K)^+.
+\]
+
+Use a Monte Carlo method with \(10^5\) samples to estimate \(C_0\), the
+price of the option at time 0, when \(K = 105\). Report your answer as
+\(a \pm b\) with \(a\) rounded to the nearest number with two decimal
+places and \(b\) rounded up to two decimal places.
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi}.}
+\item
+  \((S_0, t, u, d) = (100, 5, 1.1, 0.9)\).
+\item
+  \((S_0, t, u, d) = (100, 5, 1.2, 0.9)\).
+\item
+  \((S_0, t, u, d) = (100, 5, 1.1, 0.8)\).
+\item
+  \((S_0, t, u, d) = (100, 5, 1.2, 0.8)\).
+\end{enumerate}
+
+Consider a European call with strike price 105 and exercise time 5,
+where the stock uses a binomial model with
+\(u = 1.1, d = 0.9, p = 0.6\). So \[
+C_5 = (S_5 - 105)^+.
+\]
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi}.}
+\item
+  What is \(p^*\) that makes this a risk neutral equivalent martingale
+  measure?
+\item
+  What is \(\mathbb{E}_*[S_t \mid S_0 = 100]\) for all \(t \geq 0\)?
+\item
+  Estimate \(\operatorname{cov}_*(S_5, C_5)\) using 1000 Monte Carlo
+  samples.
+\item
+  Estimate \(\mathbb{V}_*(S_5)\) using 1000 Monte Carlo samples.
+\item
+  Estimate \(C_0\) using \(S_5\) as a control variate with \(10^5\)
+  samples. (Remember that this estimate should use data drawn
+  independently from those used in part c and part d.) Report your
+  answer as \(a \pm b\) with \(a\) rounded to the nearest number with
+  two decimal places and \(b\) rounded up to two decimal places.
+\end{enumerate}
+
+Continuing the last problem, consider trying using Importance Sampling
+to decrease the variance. The idea is to use a different \(p\) value in
+the binomial model, which is then reweighted appropriately in the IS
+ratio.
+
+Try using \(p = 0.7\) with \(10^5\) samples to estimate \(C_0\). Report
+your answer as \(a \pm b\) with \(a\) rounded to the nearest number with
+two decimal places and \(b\) rounded up to two decimal places.
+
+Consider an Asian call option based on a stock that obeys a binomial
+model with parameters \(u = 1.1\), \(d = 0.9\), \(K = 105\), and
+\(t = 5\). The value of the Asian call at time \(t\) is \[
+A_t = \left( \frac{S_1 + \cdots + S_t}{t} - K\right)^+
+\]
+
+Use a Monte Carlo method with \(10^5\) samples to estimate the price
+\(A_0\). Report your answer as \(a \pm b\) with \(a\) rounded to the
+nearest number with two decimal places and \(b\) rounded up to two
+decimal places.
+
+Consider the last problem, but now using \(S_5\) as a control variate.
+
+\begin{enumerate}
+\def\labelenumi{\alph{enumi}.}
+\item
+  Using 1000 samples of \((A_5, S_5)\), estimate the value of \(c\) to
+  use \(S_5\) as a covariate.
+\item
+  Using \(10^5\) samples (independent of those in part a), estimate
+  \(A_5\) using the \(S_5\) as a control variate with your \(c\) from
+  part a.
+\end{enumerate}
+
+Repeat the previous problem, but using importance sampling with
+\(p = 0.7\).
+
+\end{document}

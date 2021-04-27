@@ -1,0 +1,543 @@
+---
+title: 'Homework #7 Math 160'
+author: "Ethan Ashby"
+output: 
+  html_document:
+    css: ./homework-style.css
+---
+
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\berndist}{\textsf{Bern}}
+\newcommand{\gammadist}{\textsf{Gamma}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\poisdist}{\textsf{Pois}}
+\newcommand{\tdist}{\textsf{t}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\negativebinomialdist}{\textsf{NegBin}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\conf}{\operatorname{conf}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+\newcommand{\asin}{\operatorname{asin}}
+\newcommand{\acos}{\operatorname{acos}}
+\newcommand{\mrrtt}{\textsf{M}\textsf{R}^2\textsf{T}^2}
+
+```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(echo = TRUE, fig.height = 3, fig.width = 5)
+#Color Format
+colFmt <- function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt <- function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\framebox{\\hspace*{1em} ", x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- function(x) boxFmt(x)
+library(tidyverse)
+```
+
+Due:  31 Mar, 2021
+
+1) Create solutions using `:::: {.solution}` and `::::` in the .Rmd file.
+
+2) If the .css file is not working for you, type out the Problem headings using `# Problem 1`, `# Solution`, `# Problem 2`, and so on.
+
+2) Knit to an .html file.
+
+3) Print out the .html file inside a browser (such as Chrome or Safari) to a .pdf file.
+
+4) Upload the .pdf file to Gradescope.
+
+5) Mark the pages that your questions are on.
+
+6) Be sure to box your answers with the `\boxed{put in box}` $\LaTeX$ command.
+
+7) Be sure to give nonintegral answers to four significant digits.
+
+```{r, echo = FALSE}
+set.seed(1234567)
+```
+
+::::: {.problem}
+Suppose the target distribution is \( g_X(s) = s^{-3 / 2} \ind(s \geq 1) \).  A slice sampler is used that works as follows given the current state \( X \).
+
+1. Draw \( Y \) uniformly from 0 to \( 1 / X^{3 / 2} \).
+
+2. Draw \( X \) uniformly from 1 to \( 1 / Y^{2 / 3} \).
+
+Implement this single step in R, then use it to take 1000 burn in steps followed by 1000 states of this chain, and use it to estimate \( \prob(X \geq 2) \).  Replicate the chain run 10 times and report your result as \( a \pm b \).
+:::::
+
+::::{.solution}
+Step function
+```{r}
+step_splice_p1<-function(x){
+  y<-runif(1)*1/x^(3/2)
+  x<-runif(1, min=1, max=1/y^(2/3))
+  return(x)
+}
+```
+
+Mchain
+```{r}
+set.seed(1234567)
+slice_sampler_p1<-function(steps){
+  burnin<-steps
+  datasteps<-steps
+  x<-1
+  for(i in 1:burnin){
+    x<-step_splice_p1(x)
+  }
+  res<-rep(0, datasteps)
+  for(i in 1:datasteps){
+    res[i]<-(x>=2)
+    x<-step_splice_p1(x)
+  }
+  return(res)
+}
+
+res<-replicate(10, mean(slice_sampler_p1(steps=1000)))
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+
+My estimate of $\prob(X \geq 2)=\boxed{0.686 \pm 0.012}$.
+::::
+
+::::: {.problem}
+Suppose the goal is to approximately sample \( X \) with unnormalized density
+\[
+g_X(x) = \sin(x) \cos(x)^2 \ind(x \in [0, \tau / 4]).
+\]
+
+a. Create auxiliary random variables \( Y_1, Y_2, Y_3 \) so that \( (X, Y_1, Y_2, Y_3) \) has a uniform distribution.  
+
+b. Write down the state space over which \( (X, Y_1, Y_2, Y_3) \) is uniform.
+
+c. What is the distribution of \( [X \mid Y_1, Y_2, Y_3] \).
+:::::
+
+::::{.solution}
+a.
+Create $Y_1$ for the first factor ($\sin(x)$), $Y_2$ for the second ($\cos(x)$), and $Y_3$ for the third ($\cos(x)$). 
+
+b.
+If $Y_1, Y_2, Y_3$ are constructed as above, then $Y_1 \leq \cos(X)$, $Y_2, Y_3 \leq \sin(X)$. Therefore, $[(Y_1, Y_2, Y_3)|X] \sim (\unifdist([0,\sin(X)]), \unifdist([0,\cos(X)]), \unifdist([0,\cos(X)]))$. 
+
+c. 
+\( [X \mid Y_1, Y_2, Y_3] \sim \unifdist([\arcsin{Y_1}, \min(\arccos{Y_2}, \arccos{Y_3})]\)
+::::
+
+::::: {.problem}
+Continuing the last problem, write R code to take steps in this Markov chain.  Record the state during 1000 steps after 1000 steps of burn in, and plot a kernel density estimate of the result along with the true density for comparison.
+:::::
+
+::::{.solution}
+This is the step function
+```{r}
+step_prod_slice_p3<-function(x, u){
+  y1<-u[1]*sin(x)
+  y2<-u[2]*cos(x)
+  y3<-u[3]*cos(x)
+  #lower bound
+  lb<-asin(y1)
+  ub<-min(acos(y2), acos(y3))
+  x<-runif(1, min=lb, max=ub)
+  return(x)
+}
+```
+
+Below we run the Markov Chain. Using wolfram alpha, I found that the normalizing constant $C$ for $g_X(x)$ is $3$, so I compared the output of my Markov Chain to $3 \cdot g_X(x)$.
+
+```{r}
+set.seed(1234567)
+
+prod_slice_mchain_p3<-function(steps){
+  burnin<-steps
+  datasteps<-steps
+  m1<-replicate(3, runif(burnin))
+  x<-1
+  for(i in 1:burnin){
+    x<-step_prod_slice_p3(x, u=m1[i,])
+  }
+  res<-rep(0, datasteps)
+  m2<-replicate(3, runif(datasteps))
+  for(i in 1:datasteps){
+    x<-step_prod_slice_p3(x, u=m2[i,])
+    res[i]<-x
+  }
+  return(res)
+}
+
+res<-prod_slice_mchain_p3(steps=1000)
+
+true<-tibble(
+  x=seq(0, (2*pi)/4, by=0.01),
+  y=sin(x)*cos(x)*cos(x)
+)
+
+#markoc chain density
+res %>% density() %>% plot(main="Compare M.C. and true density")
+#true density
+lines(x=true$x, y=3*true$y, col="blue")
+```
+The distribution produced by the markov chain (black) is quite close to the true density (blue). Increasing the number of steps leads to highly concordant distributions.
+::::
+
+
+::::: {.problem}
+Consider the following edge values in the middle of a run of Swendsen-Wang.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(tidygraph)
+library(ggraph)
+```
+
+
+```{r, echo = FALSE, fig.height = 3, fig.width = 3}
+set.seed(12345678)
+lattice_graph <- create_lattice(c(3, 3))
+from  <- lattice_graph %>% activate(edges) %>% pull(from)
+to    <- lattice_graph %>% activate(edges) %>% pull(to)
+ising <- c(0, 0, 0, 1, 0, 0, 1, 0, 1)
+m     <- length(from)
+beta  <- 1
+sw    <- runif(m) * exp(beta * (ising[from] == ising[to]))
+lg_sw <- lattice_graph %>% activate(edges) %>% mutate(sw = round(sw, 2))
+lg_g  <- 
+  ggraph(graph = lg_sw, x = (0:8 %% 3), y = -floor(0:8 / 3)) +
+    geom_edge_link() +
+    theme_graph() +
+    coord_fixed(clip = 'off') +
+    theme(legend.position = "none") +
+    geom_edge_link(aes(label = sw, vjust = 1.5, hjust = 0.6), color = "red")
+lg_g +
+    geom_node_point(size = 12, shape = 21, color = "black", fill = "gray") +
+    geom_node_text(aes(label = 1:9), color = "white", vjust = 0.4)
+```
+
+a. How many connected components are formed by edges with weight greater than 1?
+
+b. How many different colorings of the nodes are allowed with these edge values?
+
+c. After choosing colors for the nodes conditioned on the edge weights, what is the probability that nodes 1 and 6 are the same color?
+
+d. After choosing colors for the nodes conditioned on the edge weights, what is the probability that nodes 1 and 7 are the same color?
+:::::
+
+::::{.solution}
+a. How many connected components are formed by edges with weight greater than 1?
+There are $\boxed{3}$ connected components. The first comonent includes vertices 4 and 7. The second includes vertices 1,2,3,5,6, and 8. The third component includes just 9.
+
+b. How many different colorings of the nodes are allowed with these edge values?
+The connected components must have the same colors. Since there are 3 connected componehts and two possible colors. There exist $2^3=\boxed{8}$ possible colorings of the nodes.
+
+c. After choosing colors for the nodes conditioned on the edge weights, what is the probability that nodes 1 and 6 are the same color?
+The probability that ndoes 1 and 6 are the same color is $\boxed{1}, because 1 and 6 are a part of the same connected component, and therefore must have the same color.
+
+d. After choosing colors for the nodes conditioned on the edge weights, what is the probability that nodes 1 and 7 are the same color?
+The probability that nodes 1 and 7 are the same color is $\boxed{1/2}$, since the nodes are a part of different connected components. Each connected component can take on two colors, and half the time those colors will match.
+::::
+
+::::: {.problem}
+Suppose that \( X \sim \unifdist([0, 5]) \), and \( M \sim \unifdist([-1, 1]) \).  Find analytically the probability that \( X + M \in [0, 5] \).
+:::::
+
+::::{.solution}
+Let's first focus on the cases where $X+M$ is guaranteed to lie in $[0,5]$. If $X \in [1, 4]$, then $X+M$ is guaranteed to lie in $[0,5]$. The probability that $X \in [1,4]=\frac{m([1,4])}{m([0,5])}=\frac{3}{5}$.
+Now consider the case where $X \in [0,1)$. The expected value of $X$ in this region is $\mathbb{E}[X]=1/2$. For $X=1/2$, $X+M \in [0,5]$ with probability $3/4$. Thus, $3/4$ is the expected probability of remaining in $[0,5]$ if $X \in [0,1)$. The probability that $X \in [0,1)$ in the first place is $1/5$. The joint probability, of $X \in [0,1)$ AND $X+M \in [0,5]$ is $3/4 \cdot 1/5 = 3/20$.
+The same exact logic holds for $X \in (4,5]$. The expected probability of remaining in $[0,5]$ if $X \in (4,5]$ is $3/4$, and the probability of $X \in (4,5]$ in the first place is $1/5$. So the joint probability is $3/20$ as well.
+So the total probability of $X+M \in [0,5]$ is the sum of these probabilities: $3/5 + 3/20 + 3/20 = \boxed{9/10}$.
+::::
+
+::::: {.problem}
+Write a Monte Carlo simulation to verify your answer in the previous problem.
+:::::
+
+::::{.solution}
+```{r}
+step_p6<-function(x, u){
+  xnew<-x+(2*u-1)
+  if(xnew<=5 & xnew>=0){
+    return(xnew)
+  }
+  else{
+    return(x)
+  }
+}
+```
+
+```{r}
+set.seed(1234567)
+
+p6_mchain<-function(steps){
+  burnin<-steps
+  datasteps<-steps
+  m1<-runif(burnin)
+  x<-3
+  for(i in 1:burnin){
+    x<-step_p6(x, m1[i])
+  }
+  res<-rep(0, datasteps)
+  m2<-runif(datasteps)
+  for(i in 1:datasteps){
+    xnew<-step_p6(x, m2[i])
+    #return if new state equals old state
+    #i.e. if move was rejected b/c it would land outside state space
+    res[i]<-(x!=xnew)
+    x<-xnew
+  }
+  return(res)
+}
+
+res<-replicate(10, mean(p6_mchain(steps=1000)))
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(10)
+) %>% kable()
+```
+
+Using MC simulation, I estimated that the probability of $X+M \in [0,5]$ is $\boxed{0.9003 \pm 0.0050}$. This is very close to the analytical estimate!
+::::
+
+
+
+::::: {.problem}
+For \( \Omega = (-\infty, \infty) \), consider a symmetric random walk where \( M \sim \unifdist([-1, 1]) \), and the proposed state is \( Y = X + M. \)
+
+Using this proposal together with \( \mrrtt \) to create R code for a single step in a chain with stationary distribution that has unnormalized density
+\[
+f_X(s) = \exp(-|x|^{3 / 2}).
+\]
+Your function should take as input the current state and a vector of two standard uniforms, and return the next state of the chain.
+:::::
+
+::::{.solution}
+```{r}
+mr2t2_step_p7<-function(x, m, u){
+  y=x+m
+  if(u <= exp(-abs(y)^(3/2))/exp(-abs(x)^(3/2))){
+    return(y)
+  }
+  else{
+    return(x)
+  }
+}
+```
+
+Let's double check that it works... yep looks like it!
+
+```{r}
+set.seed(1234567)
+run_chain_p7<-function(steps){
+  burnin<-steps
+  datasteps<-steps
+  x<-0
+  m1<-2*runif(burnin)-1
+  m2<-runif(burnin)
+  for(i in 1:burnin){
+    x<-mr2t2_step_p7(x, m1[i], m2[i])
+  }
+  res<-rep(0, datasteps)
+  m3<-2*runif(burnin)-1
+  m4<-runif(burnin)
+  for(i in 1:burnin){
+    x<-mr2t2_step_p7(x, m3[i], m4[i])
+    res[i]<-x
+  }
+  return(res)
+}
+
+true<-tibble(
+  x=seq(-10, 10, by=0.1),
+  y=exp(-abs(x)^(1.5))
+)
+
+run_chain_p7(steps=1000) %>% density() %>% plot()
+lines(x=true$x, y=true$y)
+```
+::::
+
+::::: {.problem}
+For \( \Omega = [0, 1] \), consider a symmetric random walk where \( M \sim \unifdist([-0.1, 0.1]) \), and the proposed state is \( Y = X + M. \)
+
+Using this proposal together with \( \mrrtt \) to create R code for a single step in a chain with stationary distribution that has unnormalized density
+\[
+f_X(s) = \sin(x)\cos(x)^2 \ind(x\in[0,1]).
+\]
+
+Run the chain for 1000 steps burnin and then take 1000 steps, recording the states visited.  Use these to form a kernel density estimate of the distribution.
+:::::
+
+::::{.solution}
+```{r}
+mr2t2_step_p8<-function(x, m, u){
+  y=x+m
+  if(u <= (between(y, 0, 1))*(sin(y)*cos(y)*cos(y))/(sin(x)*cos(x)*cos(x)+(sin(x)==0))){
+    return(y)
+  }
+  else{
+    return(x)
+  }
+}
+```
+
+```{r}
+set.seed(123456)
+
+run_p8_mchain<-function(steps){
+  burnin<-steps
+  datasteps<-steps
+  m1<-0.2*runif(burnin)-0.1
+  m2<-runif(burnin)
+  x<-0.5
+  for(i in 1:burnin){
+    x<-mr2t2_step_p8(x, m=m1[i], u=m2[i])
+  }
+  res<-rep(0, datasteps)
+  m3<-0.2*runif(datasteps)-0.1
+  m4<-runif(datasteps)
+  for(i in 1:datasteps){
+    x<-mr2t2_step_p8(x, m=m3[i], u=m4[i])
+    res[i]<-x
+  }
+  return(res)
+}
+
+true<-tibble(
+  x=seq(0, 1, by=0.01),
+  y=sin(x)*cos(x)*cos(x)
+)
+
+res<-run_p8_mchain(steps=1000)
+
+#markoc chain density
+res %>% density() %>% plot(main="Compare M.C. and true density")
+#true density
+lines(x=true$x, y=3.5618*true$y, col="blue")
+```
+
+The kernel density estimate (black) is compared to the true density (blue). Normalizing constant for true density was estimated using Wolfram Alpha.
+::::
+
+::::: {.problem}
+Continuing the last problem, suppose that the symmetric random walk is \( M \sim \unifdist([-\epsilon, \epsilon]). \)  Adjust \( \epsilon \) so that the probability of accepting a move is with one percentage point of \( 1 / 4 \).
+:::::
+
+::::{.solution}
+```{r}
+set.seed(123456)
+
+run_p9_mchain<-function(steps, s){
+  burnin<-steps
+  datasteps<-steps
+  m1<-2*s*runif(burnin)-s
+  m2<-runif(burnin)
+  x<-0.5
+  for(i in 1:burnin){
+    x<-mr2t2_step_p8(x, m=m1[i], u=m2[i])
+  }
+  res<-rep(0, datasteps)
+  m3<-2*s*runif(datasteps)-s
+  m4<-runif(datasteps)
+  for(i in 1:datasteps){
+    old_x<-x
+    x<-mr2t2_step_p8(x, m=m3[i], u=m4[i])
+    res[i]<-x != old_x
+  }
+  return(res)
+}
+
+res<-replicate(10, mean(run_p9_mchain(steps=1000, s=1.58)))
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+For $s=1.58$, the probability of acceptance is $\boxed{0.2507 \pm 0.0041}$.
+::::
+
+::::: {.problem}
+Consider state space \( \Omega = \{1, 2, \ldots\} \) where the proposed state is \( Y = X + M \), where \( M \sim \unifdist(\{-1, 1\}) \).  
+
+Use \( \mrrtt \) together with this proposal to create a chain whose limiting distribution is 
+\[
+f_X(i) = \frac{C}{i^{3 / 2}} \ind(i \in \{1, 2, 3, \ldots \}).
+\]
+
+Run your chain with 10000 burnin and 10000 data gathering steps to estimate \( \prob(X = 1) = C \).  Run your chain 10 times and report your estimate of \( C \) as \( a \pm b \).
+:::::
+
+::::{.solution}
+```{r}
+step_p10<-function(x, m, u){
+  y<-x+m
+  if(u <= ((y>=1)*x^(3/2)/(y^(3/2)+(y==0)))){
+    return(y)
+  }
+  else{
+    return(x)
+  }
+}
+```
+
+Note that since the target density is $f_X(i) = \frac{C}{i^{3 / 2}} \ind(i \in \{1, 2, 3, \ldots \}).$, $f_X(i=1)=C$.
+
+```{r}
+set.seed(1234567)
+
+run_mchain_10<-function(steps){
+  burnin<-steps
+  datasteps<-steps
+  m1<-2*(runif(burnin)<0.5)-1
+  m2<-runif(burnin)
+  x<-2
+  for(i in 1:burnin){
+    x<-step_p10(x, m1[i], m2[i])
+  }
+  m3<-2*(runif(datasteps)<0.5)-1
+  m4<-runif(datasteps)
+  res<-rep(0, datasteps)
+  for(i in 1:datasteps){
+    x<-step_p10(x, m3[i], m4[i])
+    res[i]<-x
+  }
+  return(res)
+}
+
+res<-replicate(10, mean(run_mchain_10(steps=10000)==1))
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(10)
+) %>% kable()
+```
+
+Thus, my estimate for $C=\boxed{0.355 \pm 0.037}$.
+::::

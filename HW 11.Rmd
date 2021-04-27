@@ -1,0 +1,482 @@
+---
+title: 'Homework #11 Math 160'
+author: "Ethan Ashby"
+output:
+  html_document:
+    css: ./homework-style.css
+  pdf_document: default
+---
+
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\unifdist}{\textsf{Unif}}
+\newcommand{\binomialdist}{\textsf{Bin}}
+\newcommand{\geodist}{\textsf{Geo}}
+\newcommand{\berndist}{\textsf{Bern}}
+\newcommand{\gammadist}{\textsf{Gamma}}
+\newcommand{\expdist}{\textsf{Exp}}
+\newcommand{\poisdist}{\textsf{Pois}}
+\newcommand{\tdist}{\textsf{t}}
+\newcommand{\betadist}{\textsf{Beta}}
+\newcommand{\negativebinomialdist}{\textsf{NegBin}}
+\newcommand{\normaldist}{\textsf{N}}
+\newcommand{\mean}{\mathbb{E}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\argmax}{\text{arg}\,\text{max}}
+\newcommand{\cdf}{\operatorname{cdf}}
+\newcommand{\median}{\operatorname{median}}
+\newcommand{\conf}{\operatorname{conf}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+\newcommand{\ceil}[1]{\lceil{#1}\rceil}
+\newcommand{\asin}{\operatorname{asin}}
+\newcommand{\acos}{\operatorname{acos}}
+\newcommand{\mrrtt}{\textsf{M}\textsf{R}^2\textsf{T}^2}
+\newcommand{\cov}{\operatorname{cov}}
+\newcommand{\var}{\mathbb{V}}
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(knitr)
+```
+
+```{r setup, include=FALSE}
+opts_chunk$set(echo = TRUE, fig.height = 3, fig.width = 5)
+#Color Format
+colFmt <- function(x,color){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\textcolor{",color,"}{",x,"}",sep="")
+  else if(outputFormat == 'html')
+    paste("<font color='",color,"'>",x,"</font>",sep="")
+  else
+    x
+}
+#Box Format
+boxFmt <- function(x){
+  outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+  if(outputFormat == 'latex')
+    paste("\\framebox{\\hspace*{1em} ", x,"}")
+  else if(outputFormat == 'html')
+    paste("<span class=\"boxed\">",x,"</span>")
+  else
+    x
+}
+boxed <- function(x) boxFmt(x)
+```
+
+```{r, echo = FALSE}
+due_dateSpring2021 <- function(number) switch(number, "", "", "", "", "", "", "31 Mar, 2021", "7 Apr, 2021", "14 Apr, 2021", "21 Apr, 2021", "5 May, 2021")
+```
+
+
+Due:  `r due_dateSpring2021(11)`
+
+1) Create solutions using `:::: {.solution}` and `::::` in the .Rmd file.
+
+2) If the .css file is not working for you, type out the Problem headings using `# Problem 1`, `# Solution`, `# Problem 2`, and so on.
+
+2) Knit to an .html file.
+
+3) Print out the .html file inside a browser (such as Chrome or Safari) to a .pdf file.
+
+4) Upload the .pdf file to Gradescope.
+
+5) Mark the pages that your questions are on.
+
+6) Be sure to box your answers with the `\boxed{put in box}` $\LaTeX$ command.
+
+7) Be sure to give nonintegral answers to four significant digits.
+
+```{r, echo = FALSE}
+set.seed(1234567)
+```
+
+::::: {.problem}
+**The binomial model**  A stock follows a binomial model for two periods.  At each time, \( \prob(S_{t + 1} = u S_t) = p \), and \( \prob(S_{t + 1} = d S_t) = 1 - p \).  Suppose \( S_0 = \$100 \), \( p = 0.6 \), \( u = 1.1 \), and \( d = 0.95 \).
+
+a. Analytically, what is the expected value of the stock after two time periods to the nearest penny?
+
+b. Suppose we have a European call option that has exercise time 2 and strike price 105. So the value of the call at time 2 is 
+    \[
+    C_2 = (S_2 − 105)^+.
+    \]
+    What is \( \mean[C_2|S_0 = 100] \) to the nearest penny?
+:::::
+
+::::{.solution}
+a. 
+There is a $0.6^2$ probability of getting two ups, a $0.6*0.4$ probablity of getting an up and down, a $0.4*0.6$ probability of getting a down and up, and a $0.4^2$ probability of getting two downs. To get the espected value of the stock after two time steps: $\mathbb{E}[S_2]=((0.6^2 \cdot 1.1^2) + (2\cdot0.6\cdot0.4\cdot1.1\cdot0.95)+(0.4^2\cdot 0.95^2))\cdot S_0= \boxed{108.16}$.
+
+b.
+With probability $0.6^2$, $S_2=121$ so $C_2=\max{(121-105, 0)}=16$. With probability $2*0.6*0.4$, $S_2=104.5$, so $C_2=\max{(104.5-105, 0)}=0$. With probability $0.4^2$, $S_2=90.25$ and $C_2=\max{(90.25-105, 0)}=0$. So $\mean[C_2|S_0 = 100]=0.36\cdot16+0.48\cdot0+0.16\cdot0=\boxed{5.76}$.
+::::
+
+
+::::: {.problem}
+Continuing the last problem, suppose that the risk neutral equivalent martingale measure of \( p^* = 1 / 3 \) is used in the binomial model.
+
+a. Using \( p^* = 1 / 3 \), what is the the mean of \( S_2 \) given \( S_0 = 100 \).
+
+b. Using \( p^* = 1 / 3 \), what is the mean of \( C_2 \) given \( S_0 = 100 \).  (Notice that this gives the price \( C_0 \) in an arbitrage free market.)
+:::::
+
+::::{.solution}
+a.
+$\mathbb{E}[S_2|S_0=100]=121p^*(u)^2+104.50p^*(u)p^*(d)+90.25p^*(d)^2=\frac{121}{9}+\frac{104.5 \cdot 4}{9}+\frac{90.25*4}{3}=\boxed{100}$.
+This is as expected, b/c $p^*$ is the risk neutral equivalent martingale measure.
+
+b.
+$C_0=\mathbb{E}[C_2]=(1/9)(121-105) + (4/9)(0) +(4/9)(0)=16/9=\boxed{1.78}$.
+::::
+
+::::: {.problem}
+A stock follows a binomial model with \( u = 1.03 \) and \( d = 0.9 \)for ten periods. What is the chance that the stock is higher priced than when it started written as a polynomial in \( p \)?
+:::::
+
+::::{.solution}
+Note that ${10 \choose 0}p^{10}+{10 \choose 1}p^9(1-p)+\ldots+{10 \choose 10}(1-p)^{10}=1$ because these are the sums of the probabilities of 10 ups, 9 ups and 1 downs, ..., and 10 downs.
+
+Note that the 8th term is the last that generates a stock price higher than the original, because $1.03^8 \cdot 0.9^2$ is just barely greater than 1. Therefore, the probability of the stock being higher than its starting value is equal to the binomial sum above, truncated after the 8th term:
+\[\boxed{p^{10}+10p^9(1-p)+45p^8(1-p)^2}\]
+::::
+
+::::: {.problem}
+Suppose that at each time step \( t \), a stock moves from \( S_{t - 1} \) to \( S_t = 1.2 S_{t - 1} \) with probability 50% and down to \( S_t = 0.9 S_{t - 1} \) with probability 50%.
+
+a. What is \( \mean[S_1 \mid S_0] \)?
+
+b. What is \( \mean[S_2 \mid S_0] \)?
+
+c. If the probability of going up is changed to \( p^* \), what should \( p^* \) be to make the process a martingale?
+:::::
+
+::::{.solution}
+a.
+$\mathbb{E}[S_1|S_0]=0.5\cdot 1.2S_0 + 0.5\cdot 0.9S_0=\boxed{1.05S_0}$.
+
+b.
+$\mathbb{E}[S_2|S_0]=0.5^2\cdot 1.2^2S_0 + 2(0.5)^21.2\cdot0.9S_0 + 0.5^2\cdot 0.9^2S_0=\boxed{1.1025S_0}$.
+
+c.
+To make the process a martingale, we need to ensure that the expected value of $S_1$ is equal to $S_0$. For $S_0=1$, $\mathbb{E}[S_1|S_0=1]=1.2p^*+0.9(1-p^*)=1 \Rightarrow \boxed{p^*=\frac{1}{3}}$.
+::::
+
+::::: {.problem}
+Consider a European call option based on a stock that obeys a binomial model with parameters \( u \) and \( d \), strike price \( K \) and exercise time \( t \).  The value of the call at time \( t \) is
+\[
+C_t = (S_t - K)^+.
+\]
+
+Use a Monte Carlo method with \( 10^5 \) samples to estimate \( C_0 \), the price of the option at time 0, when \( K = 105 \).  Report your answer as \( a \pm b \) with \( a \) rounded to the nearest number with two decimal places and \( b \) rounded up to two decimal places.
+
+a. \( (S_0, t, u, d) = (100, 5, 1.1, 0.9) \).
+
+b. \( (S_0, t, u, d) = (100, 5, 1.2, 0.9) \).
+
+c. \( (S_0, t, u, d) = (100, 5, 1.1, 0.8) \).
+
+d. \( (S_0, t, u, d) = (100, 5, 1.2, 0.8) \).
+:::::
+
+::::{.solution}
+Let's first write a parent function to deal with all these cases.
+
+```{r}
+#computes the price of the option at time t
+eurcall_p5<-function(s0, t, u, d, p, k=105){
+  changes<-(runif(t)<p)
+  stock_price=(s0 *c(1, cumprod(rep(u, t)^changes) * cumprod(rep(d, t)^(1 - changes))) )
+  return(max(last(stock_price)-k, 0))
+}
+```
+
+a.
+Note $p^*=\frac{1-d}{u-d}=\frac{0.1}{0.2}=\frac{1}{2}$.
+
+```{r}
+set.seed(1234567)
+res<-replicate(10^5, eurcall_p5(s0=100, t=5, u=1.1, d=0.9, p=0.5, k=105))
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+My answer is $\boxed{6.91 \pm 0.04}$
+
+b.
+Note $p^*=\frac{1-d}{u-d}=\frac{0.1}{0.3}=\frac{1}{3}$.
+```{r}
+set.seed(1234567)
+res<-replicate(10^5, eurcall_p5(s0=100, t=5, u=1.2, d=0.9, p=1/3, k=105))
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+My answer is $\boxed{9.91 \pm 0.07}$.
+
+c.
+Note $p^*=\frac{1-d}{u-d}=\frac{0.2}{0.3}=\frac{2}{3}$.
+```{r}
+set.seed(1234567)
+res<-replicate(10^5, eurcall_p5(s0=100, t=5, u=1.1, d=0.8, p=2/3, k=105))
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+My answer is $\boxed{11.43 \pm 0.06}$.
+
+d.
+Note $p^*=\frac{1-d}{u-d}=\frac{0.2}{0.4}=\frac{1}{2}$.
+```{r}
+set.seed(1234567)
+res<-replicate(10^5, eurcall_p5(s0=100, t=5, u=1.2, d=0.8, p=0.5, k=105))
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+My answer is $\boxed{15.98 \pm 0.10}$.
+::::
+
+::::: {.problem}
+Consider a European call with strike price 105 and exercise time 5, where the stock uses a binomial model with \( u = 1.1, d = 0.9, p = 0.6 \).  So
+\[
+C_5 = (S_5 - 105)^+.
+\]
+
+a. What is \( p^* \) that makes this a risk neutral equivalent martingale measure?
+
+b. What is \( \mean_*[S_t \mid S_0 = 100] \) for all \( t \geq 0 \)?
+
+c. Estimate \( \cov_*(S_5, C_5) \) using 1000 Monte Carlo samples.
+
+d. Estimate \( \var_*(S_5) \) using 1000 Monte Carlo samples.
+
+e. Estimate \( C_0 \) using \( S_5 \) as a control variate with \( 10^5 \) samples.  (Remember that this estimate should use data drawn independently from those used in part c and part d.)  Report your answer as \( a \pm b \) with \( a \) rounded to the nearest number with two decimal places and \( b \) rounded up to two decimal places.
+:::::
+
+::::{.solution}
+a.
+For the binomial model, $p^*=\frac{1-d}{u-d}$, indicating that $p^*=\frac{1-0.9}{1.1-0.9}$:
+$p^*=1/2$ and $(1-p^*)=\boxed{1/2}$.
+
+b.
+$\mathbb{E}_*[S_t|S_0=100]=\boxed{100}$ for all $t \geq 0$ because we've ensured it is a martingale.
+
+c.
+```{r}
+set.seed(1234567)
+rbinomialmodel<-function(s0, t, u, d, p){
+  changes<-(runif(t)<p)
+  stockprice=(s0 *c(1, cumprod(rep(u, t)^changes) * cumprod(rep(d, t)^(1 - changes))) )
+  return(last(stockprice))
+}
+
+eurocallprice<-Vectorize(function(stockprice, k){
+  return(max(stockprice-k, 0))
+})
+
+#use p* probability is computing the stock price and eurocall price
+S_5=replicate(1000, rbinomialmodel(s0=100, t=5, u=1.1, d=0.9, p=0.5))
+C_5=eurocallprice(S_5, k=105)
+
+cov(S_5, C_5)
+```
+$\cov_*(S_5, C_5)=\boxed{254.6402}$.
+
+d.
+```{r}
+var(S_5)
+```
+$\var_*(S_5=\boxed{504.2165})$
+
+e. ONLY USE P_X AND P_Y when doing IS
+First, estimate $c$ using $S_5$.
+
+```{r}
+set.seed(1234567)
+
+#first, estimate c
+raopt_cv <- function(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.5, s_0=100, K=105) {
+  y <- (runif(t) < p_y)
+  n_up <- sum(y)
+  ratio <- (p_x / p_y)^(n_up) * ((1 - p_x) / (1 - p_y))^(t - n_up) 
+  s <- s_0 * cumprod(u^y) * cumprod(d^(1 - y)) 
+  return(c(max(last(s) - K, 0) * ratio, last(s)))
+}
+res_cv<-replicate(10^5, raopt_cv())
+c=-cov(res_cv[1,], res_cv[2,])/var(res_cv[2,])
+```
+
+```{r}
+set.seed(1234567)
+
+cv_p6 <- function(t, u, d, p_x, p_y, s_0, K, c = 0) {
+  y <- (runif(t) < p_y)
+  n_up <- sum(y)
+  ratio <- (p_x / p_y)^(n_up) * ((1 - p_x) / (1 - p_y))^(t - n_up) 
+  s <- s_0 * cumprod(u^y) * cumprod(d^(1 - y)) 
+  return(max(last(s)-K, 0) * ratio + c * (last(s) - s_0))
+}
+
+#with control variate
+res_cv<-replicate(10^5, cv_p6(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.5, s_0=100, K=105, c=c))
+#without control variate
+res_nocv<-replicate(10^5, cv_p6(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.5, s_0=100, K=105, c=0))
+
+tibble(
+  mean_nocv=mean(res_nocv),
+  se_nocv=sd(res_nocv)/sqrt(length(res_nocv)),
+  mean_cv=mean(res_cv),
+  se_cv=sd(res_cv)/sqrt(length(res_cv))
+) %>% kable()
+```
+
+My estimate is $\boxed{6.83 \pm 0.03}$. Note, the error is reduced relative to the estimate with no control variates.
+::::
+
+::::: {.problem}
+Continuing the last problem, consider trying using Importance Sampling to decrease the variance.  The idea is to use a different \( p \) value in the binomial model, which is then reweighted appropriately in the IS ratio.
+
+Try using \( p = 0.7 \) with \( 10^5 \) samples to estimate \( C_0 \).  Report your answer as \( a \pm b \) with \( a \) rounded to the nearest number with two decimal places and \( b \) rounded up to two decimal places.
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+
+#make p_y probability 0.7 for IS
+raopt_is <- function(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.7, s_0=100, K=105) {
+  y <- (runif(t) < p_y)
+  n_up <- sum(y)
+  ratio <- (p_x / p_y)^(n_up) * ((1 - p_x) / (1 - p_y))^(t - n_up) 
+  s <- s_0 * cumprod(u^y) * cumprod(d^(1 - y)) 
+  return(c(max(last(s) - K, 0) * ratio))
+}
+
+#rerun procedure
+res<-replicate(10^5, raopt_is())
+
+tibble(
+  mean_is=mean(res),
+  se_is=sd(res)/sqrt(length(res)),
+) %>% kable()
+```
+My estimate is $\boxed{6.84 \pm 0.02}$. The error term is even smaller in this case than in the basic estimate and the control variate estimate.
+::::
+
+::::: {.problem}
+Consider an Asian call option based on a stock that obeys a binomial model with parameters \( u = 1.1 \), \( d = 0.9 \), \( K = 105 \), and \( t = 5 \).  The value of the Asian call at time \( t \) is 
+\[
+A_t = \left( \frac{S_1 + \cdots + S_t}{t} - K\right)^+
+\]
+
+Use a Monte Carlo method with \( 10^5 \) samples to estimate the price \( A_0 \).  Report your answer as \( a \pm b \) with \( a \) rounded to the nearest number with two decimal places and \( b \) rounded up to two decimal places.
+:::::
+
+::::{.solution}
+Use $p^*=\frac{1-d}{u-d}=\frac{0.1}{0.2}=\frac{1}{2}$.
+
+```{r}
+set.seed(1234567)
+
+rbinomialmodel<-function(s0, t, u, d, p){
+  changes<-(runif(t)<p)
+  stockprice=(s0 *c(1, cumprod(rep(u, t)^changes) * cumprod(rep(d, t)^(1 - changes))) )
+  return(stockprice)
+}
+
+asianoptprice<-function(s0, t, u, d, p, k){
+  stockprices=rbinomialmodel(s0=s0, t=t, u=u, d=d, p=p)
+  return(max(mean(stockprices)-k, 0))
+}
+
+res=replicate(10^5, asianoptprice(s0=100, t=5, u=1.1, d=0.9, p=0.5, k=105))
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res))
+) %>% kable()
+```
+My estimate of the price of the Asian option $A_0=\boxed{3.11 \pm 0.02}$.
+::::
+
+::::: {.problem}
+Consider the last problem, but now using \( S_5 \) as a control variate.
+
+a.  Using 1000 samples of \( (A_5, S_5) \), estimate the value of \( c \) to use \( S_5 \) as a covariate.
+
+b. Using \( 10^5 \) samples (independent of those in part a), estimate \( A_5 \) using the \( S_5 \) as a control variate with your \( c \) from part a.
+:::::
+
+::::{.solution}
+a.
+Again, $p^*=0.5$.
+```{r}
+set.seed(1234567)
+
+asianopt_cv_p8 <- function(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.5, s0=100, k=105) {
+  y <- (runif(t) < p_y)
+  n_up <- sum(y)
+  ratio <- (p_x / p_y)^(n_up) * ((1 - p_x) / (1 - p_y))^(t - n_up) 
+  s <- s0 * cumprod(u^y) * cumprod(d^(1 - y)) 
+  return(c(max(mean(s) - k, 0) * ratio, last(s)))
+}
+
+res<-replicate(10^5, asianopt_cv_p8())
+
+c=-cov(res[1,], res[2,])/var(res[2,])
+c
+```
+My estimate of $c=\boxed{-0.2580}$.
+
+b.
+```{r}
+asianopt_cv2_p8 <- function(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.5, s0=100, k=105, c=0) {
+  y <- (runif(t) < p_y)
+  n_up <- sum(y)
+  ratio <- (p_x / p_y)^(n_up) * ((1 - p_x) / (1 - p_y))^(t - n_up) 
+  s <- s0 * cumprod(u^y) * cumprod(d^(1 - y)) 
+  return(c(max(mean(s) - k, 0) * ratio+c* (last(s)-s0)))
+}
+
+res<-replicate(10^5, asianopt_cv2_p8(c=0))
+res_cv<-replicate(10^5, asianopt_cv2_p8(c=c))
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res)),
+  mean_cv=mean(res_cv),
+  se_cv=sd(res_cv)/sqrt(length(res_cv))
+) %>% kable()
+```
+The estimate using control variates is $\boxed{4.00 \pm 0.02}$. You can see that including the control variate reduced the size of the error term!
+::::
+
+::::: {.problem}
+Repeat the previous problem, but using importance sampling with \( p = 0.7 \).
+:::::
+
+::::{.solution}
+```{r}
+set.seed(1234567)
+
+asianopt_p8 <- function(t=5, u=1.1, d=0.9, p_x=0.5, p_y=0.7, s0=100, k=105) {
+  y <- (runif(t) < p_y)
+  n_up <- sum(y)
+  ratio <- (p_x / p_y)^(n_up) * ((1 - p_x) / (1 - p_y))^(t - n_up) 
+  s <- s0 * cumprod(u^y) * cumprod(d^(1 - y)) 
+  return(max(mean(s) - k, 0) * ratio)
+}
+
+res<-replicate(10^5, asianopt_p8())
+
+tibble(
+  mean=mean(res),
+  se=sd(res)/sqrt(length(res)),
+) %>% kable()
+```
+My IS estimate is $\boxed{4.03 \pm 0.01}$. As you can see, using IS drove down the error rate more than standard and CV methods.
+::::
